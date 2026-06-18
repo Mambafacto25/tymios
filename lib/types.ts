@@ -1,0 +1,32 @@
+// Types des données métier (miroir du schéma supabase/migrations).
+
+export type PieceStatut = "a_faire" | "en_cours" | "bloquee" | "terminee";
+
+/** Ligne de pièce telle que lue par le tableau de bord (avec jointures). */
+export type PieceRow = {
+  id: number;
+  numero_serie: string | null;
+  numero_of: string | null;
+  designation_article: string | null;
+  titre_operation: string;
+  priorite: number;
+  echeance: string | null;
+  statut_courant: PieceStatut;
+  atelier: { nom: string; pole: { libelle: string; couleur: string | null } | null } | null;
+  proprietaire: { prenom: string; nom: string } | null;
+};
+
+export const STATUT_LABEL: Record<PieceStatut, string> = {
+  a_faire: "À faire",
+  en_cours: "En cours",
+  bloquee: "Bloquée",
+  terminee: "Terminée",
+};
+
+/** Classes Tailwind par statut (pastille colorée). */
+export const STATUT_CLASSES: Record<PieceStatut, string> = {
+  a_faire: "bg-white/10 text-white/70",
+  en_cours: "bg-blue-500/20 text-blue-300",
+  bloquee: "bg-red-500/20 text-red-300",
+  terminee: "bg-emerald-500/20 text-emerald-300",
+};
