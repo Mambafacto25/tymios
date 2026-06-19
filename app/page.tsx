@@ -79,7 +79,7 @@ export default async function HomePage() {
                 <tr>
                   <th className="px-4 py-2 font-medium">Opération</th>
                   <th className="px-4 py-2 font-medium">N° série / OF</th>
-                  <th className="px-4 py-2 font-medium">Atelier</th>
+                  <th className="px-4 py-2 font-medium">Secteur</th>
                   <th className="px-4 py-2 font-medium">Propriétaire</th>
                   <th className="px-4 py-2 font-medium">Échéance</th>
                   <th className="px-4 py-2 font-medium">Statut</th>
@@ -113,16 +113,15 @@ export default async function HomePage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-white/70">
-                      {p.atelier ? (
+                      {p.atelier?.pole ? (
                         <span className="inline-flex items-center gap-1.5">
                           <span
                             className="inline-block h-2 w-2 rounded-full"
                             style={{
-                              backgroundColor:
-                                p.atelier.pole?.couleur ?? "#6b7280",
+                              backgroundColor: p.atelier.pole.couleur ?? "#6b7280",
                             }}
                           />
-                          {p.atelier.nom}
+                          {p.atelier.pole.libelle}
                         </span>
                       ) : (
                         "—"

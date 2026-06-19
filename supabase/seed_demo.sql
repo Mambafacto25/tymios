@@ -10,9 +10,9 @@ from auth.users u
 where u.email = 'thibaudserugue@gmail.com'
 on conflict (id) do nothing;
 
--- 2. Un atelier rattaché au pôle Production
+-- 2. Un atelier rattaché au secteur (pôle) Méthodes
 insert into ateliers (nom, pole_id)
-select 'Établi A', (select id from poles where libelle = 'Production')
+select 'Établi A', (select id from poles where libelle = 'Méthodes')
 where not exists (select 1 from ateliers where nom = 'Établi A');
 
 -- 3. Quelques pièces de démo (statuts / priorités / échéances variés)
