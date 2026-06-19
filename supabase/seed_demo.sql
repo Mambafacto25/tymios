@@ -15,6 +15,13 @@ insert into ateliers (nom, pole_id)
 select 'Établi A', (select id from poles where libelle = 'Méthodes')
 where not exists (select 1 from ateliers where nom = 'Établi A');
 
+-- 2 bis. Un atelier par défaut pour CHAQUE secteur (permet de créer une pièce
+-- dans n'importe quel secteur depuis le formulaire).
+insert into ateliers (nom, pole_id)
+select 'Atelier ' || p.libelle, p.id
+from poles p
+where not exists (select 1 from ateliers a where a.pole_id = p.id);
+
 -- 3. Quelques pièces de démo (statuts / priorités / échéances variés)
 insert into pieces (
   numero_serie, numero_of, designation_article, titre_operation,

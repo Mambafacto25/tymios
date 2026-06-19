@@ -2,6 +2,19 @@
 
 export type PieceStatut = "a_faire" | "en_cours" | "bloquee" | "terminee";
 
+/** Référentiel secteur (pôle). */
+export type Pole = { id: number; libelle: string; couleur: string | null };
+
+/** Atelier (utilisé pour relier une pièce à un secteur). */
+export type Atelier = { id: number; pole_id: number };
+
+export const STATUTS: PieceStatut[] = [
+  "a_faire",
+  "en_cours",
+  "bloquee",
+  "terminee",
+];
+
 /** Ligne de pièce telle que lue par le tableau de bord (avec jointures). */
 export type PieceRow = {
   id: number;
