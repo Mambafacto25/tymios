@@ -25,9 +25,15 @@ export type PieceRow = {
   priorite: number;
   echeance: string | null;
   statut_courant: PieceStatut;
+  proprietaire_courant_id: string | null;
+  relais_vers_id: string | null;
   atelier: { nom: string; pole: { libelle: string; couleur: string | null } | null } | null;
   proprietaire: { prenom: string; nom: string } | null;
+  destinataire: { prenom: string; nom: string } | null;
 };
+
+/** Personne (établi) pour le choix d'un destinataire de relais. */
+export type Personne = { id: string; prenom: string; nom: string };
 
 export const STATUT_LABEL: Record<PieceStatut, string> = {
   a_faire: "À faire",

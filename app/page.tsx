@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { PIECE_SELECT } from "@/lib/queries";
 import { PiecesBoard } from "@/components/pieces-board";
-import type { Atelier, PieceRow, Pole } from "@/lib/types";
+import type { Atelier, Personne, PieceRow, Pole } from "@/lib/types";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -11,13 +11,14 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [piecesRes, polesRes, ateliersRes] = await Promise.all([
+  const [piecesRes, polesRes, ateliersRes, usersRes] = await Promise.all([
     supabase
       .from("pieces")
       .select(PIECE_SELECT)
       .order("echeance", { ascending: true, nullsFirst: false }),
     supabase.from("poles").select("id, libelle, couleur").order("libelle"),
     supabase.from("ateliers").select("id, pole_id"),
+    supabase.from("users").select("id, prenom, nom").eq("actif", true),
   ]);
 
   return (
@@ -44,6 +45,7 @@ export default async function HomePage() {
         initialPieces={(piecesRes.data as unknown as PieceRow[]) ?? []}
         poles={(polesRes.data as Pole[]) ?? []}
         ateliers={(ateliersRes.data as Atelier[]) ?? []}
+        users={(usersRes.data as Personne[]) ?? []}
         userId={user!.id}
       />
     </main>
