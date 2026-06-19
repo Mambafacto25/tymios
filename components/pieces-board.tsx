@@ -4,6 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PIECE_SELECT } from "@/lib/queries";
 import {
+  createPieceAction,
+  changeStatutAction,
+  envoiRelaisAction,
+  annulerEnvoiAction,
+  prendreRelaisAction,
+  refuserRelaisAction,
+  setMyPinAction,
+} from "@/app/actions/pieces";
+import {
   STATUT_CLASSES,
   STATUT_LABEL,
   STATUTS,
@@ -86,54 +95,25 @@ export function PiecesBoard({
     };
   }, [supabase, refetch]);
 
-  async function logEvent(
-    pieceId: number,
-    type: string,
-    payload: Record<string, unknown>,
-  ) {
-    const { error: e } = await supabase.from("events").insert({
-      piece_id: pieceId,
-      type,
-      auteur_id: userId,
-      payload,
-    });
-    return e?.message ?? null;
-  }
-
   async function changeStatut(piece: PieceRow, vers: PieceStatut) {
     if (vers === piece.statut_courant) return;
     setError(null);
-    const e = await logEvent(piece.id, "changement_statut", {
-      de: piece.statut_courant,
-      vers,
-    });
-    if (e) return setError(e);
-    await supabase
-      .from("pieces")
-      .update({ statut_courant: vers })
-      .eq("id", piece.id);
+    const { error } = await changeStatutAction(piece.id, piece.statut_courant, vers);
+    if (error) return setError(error);
     refetch();
   }
 
   async function envoiRelais(piece: PieceRow, versId: string) {
     setError(null);
-    const e = await logEvent(piece.id, "envoi_relais", { vers: versId });
-    if (e) return setError(e);
-    await supabase
-      .from("pieces")
-      .update({ relais_vers_id: versId })
-      .eq("id", piece.id);
+    const { error } = await envoiRelaisAction(piece.id, versId);
+    if (error) return setError(error);
     refetch();
   }
 
   async function annulerEnvoi(piece: PieceRow) {
     setError(null);
-    const e = await logEvent(piece.id, "annulation_envoi", {});
-    if (e) return setError(e);
-    await supabase
-      .from("pieces")
-      .update({ relais_vers_id: null })
-      .eq("id", piece.id);
+    const { error } = await annulerEnvoiAction(piece.id);
+    if (error) return setError(error);
     refetch();
   }
 
@@ -143,30 +123,19 @@ export function PiecesBoard({
       `Entre ton PIN pour prendre « ${piece.titre_operation} » :`,
     );
     if (!pin) return;
-    const { data: ok, error: rpcErr } = await supabase.rpc("verify_my_pin", {
-      p_pin: pin,
-    });
-    if (rpcErr) return setError(rpcErr.message);
-    if (!ok) return setError("PIN incorrect.");
-    const e = await logEvent(piece.id, "acceptation", {
-      de: piece.proprietaire_courant_id,
-    });
-    if (e) return setError(e);
-    await supabase
-      .from("pieces")
-      .update({ proprietaire_courant_id: userId, relais_vers_id: null })
-      .eq("id", piece.id);
+    const { error } = await prendreRelaisAction(
+      piece.id,
+      pin,
+      piece.proprietaire_courant_id,
+    );
+    if (error) return setError(error);
     refetch();
   }
 
   async function refuser(piece: PieceRow) {
     setError(null);
-    const e = await logEvent(piece.id, "refus", {});
-    if (e) return setError(e);
-    await supabase
-      .from("pieces")
-      .update({ relais_vers_id: null })
-      .eq("id", piece.id);
+    const { error } = await refuserRelaisAction(piece.id);
+    if (error) return setError(error);
     refetch();
   }
 
@@ -174,8 +143,8 @@ export function PiecesBoard({
     setError(null);
     const pin = window.prompt("Choisis ton code PIN (4 chiffres) :");
     if (!pin) return;
-    const { error: e } = await supabase.rpc("set_my_pin", { p_pin: pin });
-    if (e) return setError(e.message);
+    const { error } = await setMyPinAction(pin);
+    if (error) return setError(error);
     window.alert("PIN enregistré.");
   }
 
@@ -189,32 +158,19 @@ export function PiecesBoard({
     if (!atelier) return setError("Aucun atelier rattaché à ce secteur.");
 
     setBusy(true);
-    const { data: created, error: insErr } = await supabase
-      .from("pieces")
-      .insert({
-        titre_operation: titre.trim(),
-        numero_serie: numeroSerie.trim() || null,
-        numero_of: numeroOf.trim() || null,
-        designation_article: designation.trim() || null,
-        atelier_id: atelier.id,
-        priorite: prioritaire ? 1 : 0,
-        echeance: echeance || null,
-        statut_courant: "a_faire",
-        proprietaire_courant_id: userId,
-      })
-      .select("id")
-      .single();
-
-    if (insErr || !created) {
-      setBusy(false);
-      return setError(insErr?.message ?? "Création impossible.");
-    }
-
-    await logEvent(created.id, "creation", {
+    const { error } = await createPieceAction({
       titre_operation: titre.trim(),
       numero_serie: numeroSerie.trim() || null,
       numero_of: numeroOf.trim() || null,
+      designation_article: designation.trim() || null,
+      atelier_id: atelier.id,
+      priorite: prioritaire ? 1 : 0,
+      echeance: echeance || null,
     });
+    if (error) {
+      setBusy(false);
+      return setError(error);
+    }
 
     setTitre("");
     setPoleId("");
