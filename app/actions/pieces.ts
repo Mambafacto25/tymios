@@ -69,11 +69,78 @@ export async function changeStatutAction(
   return e2 ? { error: e2.message } : {};
 }
 
+export async function pointerTempsAction(
+  pieceId: number,
+  dureeSec: number,
+  manuel: boolean,
+  debutIso?: string,
+  finIso?: string,
+): Promise<Result> {
+  const { supabase, user } = await authed();
+  if (!Number.isFinite(dureeSec) || dureeSec <= 0) {
+    return { error: "Durée invalide." };
+  }
+  const { error: e1 } = await supabase.from("events").insert({
+    piece_id: pieceId,
+    type: manuel ? "pointage_manuel" : "pointage",
+    auteur_id: user.id,
+    payload: { duree_sec: dureeSec },
+  });
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase.from("time_entries").insert({
+    piece_id: pieceId,
+    user_id: user.id,
+    duree_sec: dureeSec,
+    debut: debutIso ?? null,
+    fin: finIso ?? null,
+  });
+  return e2 ? { error: e2.message } : {};
+}
+
+export async function corrigerTempsAction(
+  pieceId: number,
+  ancienTotalSec: number,
+  nouveauTotalSec: number,
+  raison: string,
+): Promise<Result> {
+  const { supabase, user } = await authed();
+  if (!Number.isFinite(nouveauTotalSec) || nouveauTotalSec < 0) {
+    return { error: "Total invalide." };
+  }
+  // On n'efface jamais : on ajoute une écriture corrective (delta) + un événement.
+  const { error: e1 } = await supabase.from("events").insert({
+    piece_id: pieceId,
+    type: "correction_temps",
+    auteur_id: user.id,
+    payload: { de: ancienTotalSec, vers: nouveauTotalSec, raison },
+  });
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase.from("time_entries").insert({
+    piece_id: pieceId,
+    user_id: user.id,
+    duree_sec: nouveauTotalSec - ancienTotalSec,
+  });
+  return e2 ? { error: e2.message } : {};
+}
+
 export async function envoiRelaisAction(
   pieceId: number,
   versId: string,
 ): Promise<Result> {
   const { supabase, user } = await authed();
+
+  // Règle « pas de relais sans temps » : le propriétaire courant doit avoir
+  // pointé du temps sur la pièce avant de la passer.
+  const { data: te } = await supabase
+    .from("time_entries")
+    .select("duree_sec")
+    .eq("piece_id", pieceId)
+    .eq("user_id", user.id);
+  const total = (te ?? []).reduce((s, r) => s + (r.duree_sec ?? 0), 0);
+  if (total <= 0) {
+    return { error: "Pointe ton temps sur cette pièce avant de passer le relais." };
+  }
+
   const { error: e1 } = await supabase.from("events").insert({
     piece_id: pieceId,
     type: "envoi_relais",

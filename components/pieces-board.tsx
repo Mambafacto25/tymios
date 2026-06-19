@@ -11,6 +11,8 @@ import {
   prendreRelaisAction,
   refuserRelaisAction,
   setMyPinAction,
+  pointerTempsAction,
+  corrigerTempsAction,
 } from "@/app/actions/pieces";
 import {
   STATUT_CLASSES,
@@ -44,6 +46,25 @@ function nom(p: { prenom: string; nom: string } | null): string {
   return p ? `${p.prenom} ${p.nom}` : "—";
 }
 
+function totalSec(piece: PieceRow): number {
+  return (piece.temps ?? []).reduce((s, t) => s + (t.duree_sec ?? 0), 0);
+}
+
+function formatDuree(sec: number): string {
+  if (sec <= 0) return "—";
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  if (h > 0) return `${h} h ${m.toString().padStart(2, "0")}`;
+  if (m > 0) return `${m} min`;
+  return `${sec} s`;
+}
+
+function formatChrono(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export function PiecesBoard({
   initialPieces,
   poles,
@@ -60,6 +81,10 @@ export function PiecesBoard({
   // Relais en cours de saisie (quelle pièce, vers qui)
   const [relaisOpenFor, setRelaisOpenFor] = useState<number | null>(null);
   const [relaisTarget, setRelaisTarget] = useState<string>("");
+
+  // Chrono : pieceId -> timestamp (ms) de démarrage. `now` fait avancer l'affichage.
+  const [chrono, setChrono] = useState<Record<number, number>>({});
+  const [now, setNow] = useState<number>(Date.now());
 
   // Champs du formulaire de création
   const [titre, setTitre] = useState("");
@@ -78,22 +103,100 @@ export function PiecesBoard({
     if (data) setPieces(data as unknown as PieceRow[]);
   }, [supabase]);
 
-  // Temps réel : tout changement sur pieces rafraîchit la liste (multi-écrans).
+  // Temps réel : changements sur pieces ET time_entries rafraîchissent la liste.
   useEffect(() => {
     const channel = supabase
       .channel("pieces-rt")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "pieces" },
-        () => {
-          refetch();
-        },
+        () => refetch(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "time_entries" },
+        () => refetch(),
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [supabase, refetch]);
+
+  // Fait avancer l'affichage des chronos en cours (1 s) quand il y en a.
+  useEffect(() => {
+    if (Object.keys(chrono).length === 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [chrono]);
+
+  function demarrerChrono(pieceId: number) {
+    setChrono((c) => ({ ...c, [pieceId]: Date.now() }));
+    setNow(Date.now());
+  }
+
+  async function arreterChrono(piece: PieceRow) {
+    const start = chrono[piece.id];
+    if (!start) return;
+    const dureeSec = Math.max(1, Math.round((Date.now() - start) / 1000));
+    setChrono((c) => {
+      const next = { ...c };
+      delete next[piece.id];
+      return next;
+    });
+    setError(null);
+    const { error } = await pointerTempsAction(
+      piece.id,
+      dureeSec,
+      false,
+      new Date(start).toISOString(),
+      new Date().toISOString(),
+    );
+    if (error) return setError(error);
+    refetch();
+  }
+
+  async function pointerManuel(piece: PieceRow) {
+    const saisie = window.prompt(
+      `Temps à ajouter sur « ${piece.titre_operation} » (en minutes) :`,
+    );
+    if (!saisie) return;
+    const minutes = Number(saisie.replace(",", "."));
+    if (!Number.isFinite(minutes) || minutes <= 0) {
+      return setError("Durée invalide.");
+    }
+    setError(null);
+    const { error } = await pointerTempsAction(
+      piece.id,
+      Math.round(minutes * 60),
+      true,
+    );
+    if (error) return setError(error);
+    refetch();
+  }
+
+  async function corrigerTemps(piece: PieceRow) {
+    const ancien = totalSec(piece);
+    const saisie = window.prompt(
+      `Corriger le temps total de « ${piece.titre_operation} » (en minutes) :`,
+      String(Math.round(ancien / 60)),
+    );
+    if (saisie === null) return;
+    const minutes = Number(saisie.replace(",", "."));
+    if (!Number.isFinite(minutes) || minutes < 0) {
+      return setError("Total invalide.");
+    }
+    const raison = window.prompt("Motif de la correction :") ?? "";
+    setError(null);
+    const { error } = await corrigerTempsAction(
+      piece.id,
+      ancien,
+      Math.round(minutes * 60),
+      raison,
+    );
+    if (error) return setError(error);
+    refetch();
+  }
 
   async function changeStatut(piece: PieceRow, vers: PieceStatut) {
     if (vers === piece.statut_courant) return;
@@ -355,7 +458,7 @@ export function PiecesBoard({
           Aucune pièce. Clique sur « + Nouvelle pièce » pour en créer une.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-white/10">
+        <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="w-full text-sm">
             <thead className="bg-white/5 text-left text-white/60">
               <tr>
@@ -364,6 +467,7 @@ export function PiecesBoard({
                 <th className="px-4 py-2 font-medium">Propriétaire</th>
                 <th className="px-4 py-2 font-medium">Échéance</th>
                 <th className="px-4 py-2 font-medium">Statut</th>
+                <th className="px-4 py-2 font-medium">Temps</th>
                 <th className="px-4 py-2 font-medium">Relais</th>
               </tr>
             </thead>
@@ -423,6 +527,54 @@ export function PiecesBoard({
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="tabular-nums text-white/80">
+                        {chrono[p.id]
+                          ? formatChrono(
+                              Math.round((now - chrono[p.id]) / 1000),
+                            )
+                          : formatDuree(totalSec(p))}
+                      </span>
+                      {p.proprietaire_courant_id === userId ? (
+                        <span className="flex items-center gap-1">
+                          {chrono[p.id] ? (
+                            <button
+                              onClick={() => arreterChrono(p)}
+                              title="Arrêter le chrono"
+                              className="rounded bg-red-500/80 px-1.5 py-0.5 text-xs text-white transition hover:bg-red-500"
+                            >
+                              ⏹
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => demarrerChrono(p.id)}
+                              title="Démarrer le chrono"
+                              className="rounded bg-emerald-500/80 px-1.5 py-0.5 text-xs text-white transition hover:bg-emerald-500"
+                            >
+                              ▶
+                            </button>
+                          )}
+                          <button
+                            onClick={() => pointerManuel(p)}
+                            title="Saisie manuelle"
+                            className="rounded border border-white/15 px-1.5 py-0.5 text-xs text-white/70 transition hover:bg-white/5"
+                          >
+                            +
+                          </button>
+                          {totalSec(p) > 0 ? (
+                            <button
+                              onClick={() => corrigerTemps(p)}
+                              title="Corriger le temps"
+                              className="rounded border border-white/15 px-1.5 py-0.5 text-xs text-white/70 transition hover:bg-white/5"
+                            >
+                              ✎
+                            </button>
+                          ) : null}
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     {p.relais_vers_id ? (

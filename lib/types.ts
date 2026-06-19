@@ -30,6 +30,7 @@ export type PieceRow = {
   atelier: { nom: string; pole: { libelle: string; couleur: string | null } | null } | null;
   proprietaire: { prenom: string; nom: string } | null;
   destinataire: { prenom: string; nom: string } | null;
+  temps: { duree_sec: number; user_id: string }[];
 };
 
 /** Personne (établi) pour le choix d'un destinataire de relais. */
