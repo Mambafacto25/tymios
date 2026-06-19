@@ -107,43 +107,21 @@ export async function annulerEnvoiAction(pieceId: number): Promise<Result> {
 export async function prendreRelaisAction(
   pieceId: number,
   pin: string,
-  de: string | null,
 ): Promise<Result> {
-  const { supabase, user } = await authed();
-  const { data: ok, error: vErr } = await supabase.rpc("verify_my_pin", {
+  const { supabase } = await authed();
+  const { error } = await supabase.rpc("accept_relais", {
+    p_piece_id: pieceId,
     p_pin: pin,
   });
-  if (vErr) return { error: vErr.message };
-  if (!ok) return { error: "PIN incorrect." };
-
-  const { error: e1 } = await supabase.from("events").insert({
-    piece_id: pieceId,
-    type: "acceptation",
-    auteur_id: user.id,
-    payload: { de },
-  });
-  if (e1) return { error: e1.message };
-  const { error: e2 } = await supabase
-    .from("pieces")
-    .update({ proprietaire_courant_id: user.id, relais_vers_id: null })
-    .eq("id", pieceId);
-  return e2 ? { error: e2.message } : {};
+  return error ? { error: error.message } : {};
 }
 
 export async function refuserRelaisAction(pieceId: number): Promise<Result> {
-  const { supabase, user } = await authed();
-  const { error: e1 } = await supabase.from("events").insert({
-    piece_id: pieceId,
-    type: "refus",
-    auteur_id: user.id,
-    payload: {},
+  const { supabase } = await authed();
+  const { error } = await supabase.rpc("refuse_relais", {
+    p_piece_id: pieceId,
   });
-  if (e1) return { error: e1.message };
-  const { error: e2 } = await supabase
-    .from("pieces")
-    .update({ relais_vers_id: null })
-    .eq("id", pieceId);
-  return e2 ? { error: e2.message } : {};
+  return error ? { error: error.message } : {};
 }
 
 export async function setMyPinAction(pin: string): Promise<Result> {

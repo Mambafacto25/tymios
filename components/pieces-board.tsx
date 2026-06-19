@@ -123,11 +123,7 @@ export function PiecesBoard({
       `Entre ton PIN pour prendre « ${piece.titre_operation} » :`,
     );
     if (!pin) return;
-    const { error } = await prendreRelaisAction(
-      piece.id,
-      pin,
-      piece.proprietaire_courant_id,
-    );
+    const { error } = await prendreRelaisAction(piece.id, pin);
     if (error) return setError(error);
     refetch();
   }
