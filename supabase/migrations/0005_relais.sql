@@ -4,14 +4,16 @@
 alter table pieces add column if not exists relais_vers_id uuid references users (id);
 
 -- PIN sécurisé : jamais stocké en clair (hash bcrypt via pgcrypto).
-create extension if not exists pgcrypto;
+-- Sur Supabase, pgcrypto vit dans le schéma `extensions` : on l'inclut dans
+-- le search_path des fonctions pour résoudre crypt()/gen_salt().
+create extension if not exists pgcrypto with schema extensions;
 
 -- Définir / mettre à jour SON propre PIN.
 create or replace function set_my_pin(p_pin text)
 returns void
 language sql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   update users set pin_hash = crypt(p_pin, gen_salt('bf'))
   where id = auth.uid();
@@ -22,7 +24,7 @@ create or replace function verify_my_pin(p_pin text)
 returns boolean
 language sql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
   select exists (
     select 1 from users
