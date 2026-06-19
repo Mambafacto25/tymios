@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { PIECE_SELECT } from "@/lib/queries";
 import {
@@ -85,6 +86,11 @@ export function PiecesBoard({
   // Chrono : pieceId -> timestamp (ms) de démarrage. `now` fait avancer l'affichage.
   const [chrono, setChrono] = useState<Record<number, number>>({});
   const [now, setNow] = useState<number>(Date.now());
+
+  // Recherche / filtres / vue (actives vs archive)
+  const [query, setQuery] = useState("");
+  const [filtreSecteur, setFiltreSecteur] = useState("");
+  const [vue, setVue] = useState<"actives" | "archive">("actives");
 
   // Champs du formulaire de création
   const [titre, setTitre] = useState("");
@@ -286,6 +292,22 @@ export function PiecesBoard({
   const inbox = pieces.filter((p) => p.relais_vers_id === userId);
   const autresUtilisateurs = users.filter((u) => u.id !== userId);
 
+  const q = query.trim().toLowerCase();
+  const filtered = pieces.filter((p) => {
+    const estTerminee = p.statut_courant === "terminee";
+    if (vue === "actives" && estTerminee) return false;
+    if (vue === "archive" && !estTerminee) return false;
+    if (filtreSecteur && p.atelier?.pole?.libelle !== filtreSecteur) return false;
+    if (
+      q &&
+      ![p.numero_serie, p.numero_of, p.designation_article, p.titre_operation]
+        .filter(Boolean)
+        .some((v) => v!.toLowerCase().includes(q))
+    )
+      return false;
+    return true;
+  });
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -298,7 +320,7 @@ export function PiecesBoard({
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-white/50">
-            {pieces.length} pièce{pieces.length > 1 ? "s" : ""}
+            {filtered.length} pièce{filtered.length > 1 ? "s" : ""}
           </span>
           <button
             onClick={definirPin}
@@ -453,9 +475,46 @@ export function PiecesBoard({
         </form>
       ) : null}
 
-      {pieces.length === 0 ? (
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Rechercher (n° série, OF, réf., opération)…"
+          className="min-w-64 flex-1 rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none focus:border-white/30"
+        />
+        <select
+          value={filtreSecteur}
+          onChange={(e) => setFiltreSecteur(e.target.value)}
+          className="rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none focus:border-white/30"
+        >
+          <option value="">Tous les secteurs</option>
+          {poles.map((p) => (
+            <option key={p.id} value={p.libelle}>
+              {p.libelle}
+            </option>
+          ))}
+        </select>
+        <div className="inline-flex overflow-hidden rounded-md border border-white/10 text-sm">
+          <button
+            onClick={() => setVue("actives")}
+            className={`px-3 py-1.5 ${vue === "actives" ? "bg-indigo-500 text-white" : "text-white/70 hover:bg-white/5"}`}
+          >
+            Actives
+          </button>
+          <button
+            onClick={() => setVue("archive")}
+            className={`px-3 py-1.5 ${vue === "archive" ? "bg-indigo-500 text-white" : "text-white/70 hover:bg-white/5"}`}
+          >
+            Archive
+          </button>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-white/15 p-8 text-center text-sm text-white/50">
-          Aucune pièce. Clique sur « + Nouvelle pièce » pour en créer une.
+          {pieces.length === 0
+            ? "Aucune pièce. Clique sur « + Nouvelle pièce » pour en créer une."
+            : "Aucune pièce ne correspond à la recherche / au filtre."}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-white/10">
@@ -472,7 +531,7 @@ export function PiecesBoard({
               </tr>
             </thead>
             <tbody>
-              {pieces.map((p) => (
+              {filtered.map((p) => (
                 <tr
                   key={p.id}
                   className="border-t border-white/5 hover:bg-white/[0.03]"
@@ -484,7 +543,12 @@ export function PiecesBoard({
                           ●
                         </span>
                       ) : null}
-                      <span className="font-medium">{p.titre_operation}</span>
+                      <Link
+                        href={`/pieces/${p.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {p.titre_operation}
+                      </Link>
                     </div>
                     <div className="text-xs text-white/40">
                       {[p.numero_serie, p.numero_of, p.designation_article]
