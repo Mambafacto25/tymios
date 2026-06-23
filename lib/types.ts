@@ -36,6 +36,15 @@ export type PieceRow = {
 /** Personne (établi) pour le choix d'un destinataire de relais. */
 export type Personne = { id: string; prenom: string; nom: string };
 
+/** Ordre de fabrication importé (référentiel, alimenté par CSV). */
+export type Of = {
+  id: number;
+  numero_of: string;
+  designation_article: string | null;
+  numero_serie: string | null;
+  echeance: string | null;
+};
+
 export const STATUT_LABEL: Record<PieceStatut, string> = {
   a_faire: "À faire",
   en_cours: "En cours",

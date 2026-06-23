@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { PIECE_SELECT } from "@/lib/queries";
 import { PiecesBoard } from "@/components/pieces-board";
-import type { Atelier, Personne, PieceRow, Pole } from "@/lib/types";
+import type { Atelier, Of, Personne, PieceRow, Pole } from "@/lib/types";
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -11,15 +11,20 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [piecesRes, polesRes, ateliersRes, usersRes] = await Promise.all([
-    supabase
-      .from("pieces")
-      .select(PIECE_SELECT)
-      .order("echeance", { ascending: true, nullsFirst: false }),
-    supabase.from("poles").select("id, libelle, couleur").order("libelle"),
-    supabase.from("ateliers").select("id, pole_id"),
-    supabase.from("users").select("id, prenom, nom").eq("actif", true),
-  ]);
+  const [piecesRes, polesRes, ateliersRes, usersRes, ofsRes] =
+    await Promise.all([
+      supabase
+        .from("pieces")
+        .select(PIECE_SELECT)
+        .order("echeance", { ascending: true, nullsFirst: false }),
+      supabase.from("poles").select("id, libelle, couleur").order("libelle"),
+      supabase.from("ateliers").select("id, pole_id"),
+      supabase.from("users").select("id, prenom, nom").eq("actif", true),
+      supabase
+        .from("ofs")
+        .select("id, numero_of, designation_article, numero_serie, echeance")
+        .order("numero_of"),
+    ]);
 
   return (
     <main className="mx-auto max-w-5xl space-y-8 p-8">
@@ -46,6 +51,7 @@ export default async function HomePage() {
         poles={(polesRes.data as Pole[]) ?? []}
         ateliers={(ateliersRes.data as Atelier[]) ?? []}
         users={(usersRes.data as Personne[]) ?? []}
+        ofs={(ofsRes.data as Of[]) ?? []}
         userId={user!.id}
       />
     </main>

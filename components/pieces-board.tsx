@@ -15,11 +15,13 @@ import {
   pointerTempsAction,
   corrigerTempsAction,
 } from "@/app/actions/pieces";
+import { OfImport } from "@/components/of-import";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
   STATUTS,
   type Atelier,
+  type Of,
   type Personne,
   type PieceRow,
   type PieceStatut,
@@ -31,6 +33,7 @@ type Props = {
   poles: Pole[];
   ateliers: Atelier[];
   users: Personne[];
+  ofs: Of[];
   userId: string;
 };
 
@@ -71,6 +74,7 @@ export function PiecesBoard({
   poles,
   ateliers,
   users,
+  ofs,
   userId,
 }: Props) {
   const supabase = createClient();
@@ -100,6 +104,18 @@ export function PiecesBoard({
   const [designation, setDesignation] = useState("");
   const [echeance, setEcheance] = useState("");
   const [prioritaire, setPrioritaire] = useState(false);
+  const [ofId, setOfId] = useState<number | "">("");
+
+  function appliquerOf(id: number | "") {
+    setOfId(id);
+    if (id === "") return;
+    const of = ofs.find((o) => o.id === id);
+    if (!of) return;
+    setNumeroOf(of.numero_of);
+    if (of.designation_article) setDesignation(of.designation_article);
+    if (of.numero_serie) setNumeroSerie(of.numero_serie);
+    if (of.echeance) setEcheance(of.echeance);
+  }
 
   const refetch = useCallback(async () => {
     const { data } = await supabase
@@ -284,6 +300,7 @@ export function PiecesBoard({
     setDesignation("");
     setEcheance("");
     setPrioritaire(false);
+    setOfId("");
     setShowForm(false);
     setBusy(false);
     refetch();
@@ -328,6 +345,7 @@ export function PiecesBoard({
           >
             Mon PIN
           </button>
+          <OfImport />
           <button
             onClick={() => setShowForm((v) => !v)}
             className="rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-400"
@@ -385,6 +403,30 @@ export function PiecesBoard({
           onSubmit={createPiece}
           className="grid grid-cols-1 gap-4 rounded-xl border border-white/10 bg-white/5 p-5 sm:grid-cols-2"
         >
+          {ofs.length > 0 ? (
+            <label className="space-y-1 sm:col-span-2">
+              <span className="text-sm text-white/70">
+                Pré-remplir depuis un OF
+              </span>
+              <select
+                value={ofId}
+                onChange={(e) =>
+                  appliquerOf(e.target.value ? Number(e.target.value) : "")
+                }
+                className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 outline-none focus:border-white/30"
+              >
+                <option value="">— aucun (saisie libre) —</option>
+                {ofs.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.numero_of}
+                    {o.designation_article ? ` · ${o.designation_article}` : ""}
+                    {o.numero_serie ? ` · ${o.numero_serie}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
           <label className="space-y-1 sm:col-span-2">
             <span className="text-sm text-white/70">Titre de l’opération *</span>
             <input
