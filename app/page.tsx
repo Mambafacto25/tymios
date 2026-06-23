@@ -1,19 +1,39 @@
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
+import { PIECE_SELECT } from "@/lib/queries";
+import { PiecesBoard } from "@/components/pieces-board";
+import type { Atelier, Of, Personne, PieceRow, Pole } from "@/lib/types";
 
 export default async function HomePage() {
   const supabase = await createClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const [piecesRes, polesRes, ateliersRes, usersRes, ofsRes] =
+    await Promise.all([
+      supabase
+        .from("pieces")
+        .select(PIECE_SELECT)
+        .order("echeance", { ascending: true, nullsFirst: false }),
+      supabase.from("poles").select("id, libelle, couleur").order("libelle"),
+      supabase.from("ateliers").select("id, pole_id"),
+      supabase.from("users").select("id, prenom, nom").eq("actif", true),
+      supabase
+        .from("ofs")
+        .select("id, numero_of, designation_article, numero_serie, echeance")
+        .order("numero_of"),
+    ]);
+
   return (
-    <main className="mx-auto max-w-3xl space-y-8 p-8">
+    <main className="mx-auto max-w-5xl space-y-8 p-8">
       <header className="flex items-center justify-between border-b border-white/10 pb-4">
         <div>
           <h1 className="text-2xl font-semibold">Relais</h1>
           <p className="text-sm text-white/60">
-            Socle v1 — étape 1 (base + auth + déploiement)
+            Connecté en tant que{" "}
+            <span className="font-medium">{user?.email}</span>
           </p>
         </div>
         <form action={signOut}>
@@ -26,17 +46,14 @@ export default async function HomePage() {
         </form>
       </header>
 
-      <section className="space-y-2">
-        <p className="text-white/80">
-          Connecté en tant que{" "}
-          <span className="font-medium">{user?.email}</span>.
-        </p>
-        <p className="text-sm text-white/60">
-          Le socle tourne : authentification réelle branchée sur Supabase et
-          routes protégées par le middleware. Les écrans de pièces, relais et
-          pointage (étapes 2 à 6 du plan) viendront se brancher ici.
-        </p>
-      </section>
+      <PiecesBoard
+        initialPieces={(piecesRes.data as unknown as PieceRow[]) ?? []}
+        poles={(polesRes.data as Pole[]) ?? []}
+        ateliers={(ateliersRes.data as Atelier[]) ?? []}
+        users={(usersRes.data as Personne[]) ?? []}
+        ofs={(ofsRes.data as Of[]) ?? []}
+        userId={user!.id}
+      />
     </main>
   );
 }

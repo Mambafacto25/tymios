@@ -1,0 +1,198 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import type { PieceStatut } from "@/lib/types";
+
+type Result = { error?: string };
+
+/** Récupère le client serveur + l'utilisateur connecté (identité certifiée). */
+async function authed() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Non authentifié");
+  return { supabase, user };
+}
+
+export async function createPieceAction(input: {
+  titre_operation: string;
+  numero_serie: string | null;
+  numero_of: string | null;
+  designation_article: string | null;
+  atelier_id: number;
+  priorite: number;
+  echeance: string | null;
+}): Promise<Result> {
+  const { supabase, user } = await authed();
+  const { data: created, error } = await supabase
+    .from("pieces")
+    .insert({
+      ...input,
+      statut_courant: "a_faire",
+      proprietaire_courant_id: user.id,
+    })
+    .select("id")
+    .single();
+  if (error || !created) return { error: error?.message ?? "Création impossible." };
+
+  await supabase.from("events").insert({
+    piece_id: created.id,
+    type: "creation",
+    auteur_id: user.id,
+    payload: {
+      titre_operation: input.titre_operation,
+      numero_serie: input.numero_serie,
+      numero_of: input.numero_of,
+    },
+  });
+  return {};
+}
+
+export async function changeStatutAction(
+  pieceId: number,
+  de: PieceStatut,
+  vers: PieceStatut,
+): Promise<Result> {
+  const { supabase, user } = await authed();
+  const { error: e1 } = await supabase.from("events").insert({
+    piece_id: pieceId,
+    type: "changement_statut",
+    auteur_id: user.id,
+    payload: { de, vers },
+  });
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase
+    .from("pieces")
+    .update({ statut_courant: vers })
+    .eq("id", pieceId);
+  return e2 ? { error: e2.message } : {};
+}
+
+export async function pointerTempsAction(
+  pieceId: number,
+  dureeSec: number,
+  manuel: boolean,
+  debutIso?: string,
+  finIso?: string,
+): Promise<Result> {
+  const { supabase, user } = await authed();
+  if (!Number.isFinite(dureeSec) || dureeSec <= 0) {
+    return { error: "Durée invalide." };
+  }
+  const { error: e1 } = await supabase.from("events").insert({
+    piece_id: pieceId,
+    type: manuel ? "pointage_manuel" : "pointage",
+    auteur_id: user.id,
+    payload: { duree_sec: dureeSec },
+  });
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase.from("time_entries").insert({
+    piece_id: pieceId,
+    user_id: user.id,
+    duree_sec: dureeSec,
+    debut: debutIso ?? null,
+    fin: finIso ?? null,
+  });
+  return e2 ? { error: e2.message } : {};
+}
+
+export async function corrigerTempsAction(
+  pieceId: number,
+  ancienTotalSec: number,
+  nouveauTotalSec: number,
+  raison: string,
+): Promise<Result> {
+  const { supabase, user } = await authed();
+  if (!Number.isFinite(nouveauTotalSec) || nouveauTotalSec < 0) {
+    return { error: "Total invalide." };
+  }
+  // On n'efface jamais : on ajoute une écriture corrective (delta) + un événement.
+  const { error: e1 } = await supabase.from("events").insert({
+    piece_id: pieceId,
+    type: "correction_temps",
+    auteur_id: user.id,
+    payload: { de: ancienTotalSec, vers: nouveauTotalSec, raison },
+  });
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase.from("time_entries").insert({
+    piece_id: pieceId,
+    user_id: user.id,
+    duree_sec: nouveauTotalSec - ancienTotalSec,
+  });
+  return e2 ? { error: e2.message } : {};
+}
+
+export async function envoiRelaisAction(
+  pieceId: number,
+  versId: string,
+): Promise<Result> {
+  const { supabase, user } = await authed();
+
+  // Règle « pas de relais sans temps » : le propriétaire courant doit avoir
+  // pointé du temps sur la pièce avant de la passer.
+  const { data: te } = await supabase
+    .from("time_entries")
+    .select("duree_sec")
+    .eq("piece_id", pieceId)
+    .eq("user_id", user.id);
+  const total = (te ?? []).reduce((s, r) => s + (r.duree_sec ?? 0), 0);
+  if (total <= 0) {
+    return { error: "Pointe ton temps sur cette pièce avant de passer le relais." };
+  }
+
+  const { error: e1 } = await supabase.from("events").insert({
+    piece_id: pieceId,
+    type: "envoi_relais",
+    auteur_id: user.id,
+    payload: { vers: versId },
+  });
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase
+    .from("pieces")
+    .update({ relais_vers_id: versId })
+    .eq("id", pieceId);
+  return e2 ? { error: e2.message } : {};
+}
+
+export async function annulerEnvoiAction(pieceId: number): Promise<Result> {
+  const { supabase, user } = await authed();
+  const { error: e1 } = await supabase.from("events").insert({
+    piece_id: pieceId,
+    type: "annulation_envoi",
+    auteur_id: user.id,
+    payload: {},
+  });
+  if (e1) return { error: e1.message };
+  const { error: e2 } = await supabase
+    .from("pieces")
+    .update({ relais_vers_id: null })
+    .eq("id", pieceId);
+  return e2 ? { error: e2.message } : {};
+}
+
+export async function prendreRelaisAction(
+  pieceId: number,
+  pin: string,
+): Promise<Result> {
+  const { supabase } = await authed();
+  const { error } = await supabase.rpc("accept_relais", {
+    p_piece_id: pieceId,
+    p_pin: pin,
+  });
+  return error ? { error: error.message } : {};
+}
+
+export async function refuserRelaisAction(pieceId: number): Promise<Result> {
+  const { supabase } = await authed();
+  const { error } = await supabase.rpc("refuse_relais", {
+    p_piece_id: pieceId,
+  });
+  return error ? { error: error.message } : {};
+}
+
+export async function setMyPinAction(pin: string): Promise<Result> {
+  const { supabase } = await authed();
+  const { error } = await supabase.rpc("set_my_pin", { p_pin: pin });
+  return error ? { error: error.message } : {};
+}
