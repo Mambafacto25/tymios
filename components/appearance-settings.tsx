@@ -4,9 +4,13 @@ import { usePreferences } from "@/components/preferences-provider";
 
 const COLORS = [
   { label: "Blanc", value: "" },
-  { label: "Or doux", value: "#F0D879" },
-  { label: "Bleu clair", value: "#9FD0FF" },
-  { label: "Gris clair", value: "#CBD5E1" },
+  { label: "Or", value: "#F0D879" },
+  { label: "Bleu ciel", value: "#9FD0FF" },
+  { label: "Gris", value: "#CBD5E1" },
+  { label: "Menthe", value: "#A7F3D0" },
+  { label: "Rose", value: "#FBCFE8" },
+  { label: "Pêche", value: "#FED7AA" },
+  { label: "Lavande", value: "#DDD6FE" },
 ];
 
 const FONTS = [
@@ -24,7 +28,7 @@ export function AppearanceSettings({
   const { prefs, setPrefs } = usePreferences();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <div>
         <div className="mb-2 text-sm text-white/70">Couleur du texte</div>
         <div className="flex flex-wrap gap-2">
@@ -34,6 +38,7 @@ export function AppearanceSettings({
               <button
                 key={c.label}
                 onClick={() => setPrefs({ textColor: c.value })}
+                title={c.label}
                 className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition ${
                   active
                     ? "border-[#CFB53B] bg-[#CFB53B]/15"
@@ -48,7 +53,63 @@ export function AppearanceSettings({
               </button>
             );
           })}
+          <label
+            className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/15 px-3 py-1.5 text-sm hover-gold"
+            title="Couleur personnalisée"
+          >
+            <input
+              type="color"
+              value={prefs.textColor || "#eaf2fb"}
+              onChange={(e) => setPrefs({ textColor: e.target.value })}
+              className="h-4 w-4 cursor-pointer border-0 bg-transparent p-0"
+            />
+            Personnalisée
+          </label>
         </div>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        <div>
+          <div className="mb-2 flex items-center justify-between text-sm text-white/70">
+            <span>Intensité</span>
+            <span className="text-white/40">
+              {Math.round(prefs.intensite * 100)}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0.5}
+            max={1}
+            step={0.05}
+            value={prefs.intensite}
+            onChange={(e) => setPrefs({ intensite: Number(e.target.value) })}
+            className="w-full accent-[#CFB53B]"
+          />
+        </div>
+        <div>
+          <div className="mb-2 flex items-center justify-between text-sm text-white/70">
+            <span>Luminosité</span>
+            <span className="text-white/40">
+              {Math.round(prefs.luminosite * 100)}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0.6}
+            max={1.4}
+            step={0.05}
+            value={prefs.luminosite}
+            onChange={(e) => setPrefs({ luminosite: Number(e.target.value) })}
+            className="w-full accent-[#CFB53B]"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-white/10 bg-black/15 px-4 py-3">
+        <span className="text-sm text-white/50">Aperçu : </span>
+        <span className="text-sm font-medium">
+          Suivi des pièces — Tymios atelier horloger.
+        </span>
       </div>
 
       <div>

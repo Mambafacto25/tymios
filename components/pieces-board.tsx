@@ -86,6 +86,11 @@ export function PiecesBoard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Pop-up « Mon PIN »
+  const [showPin, setShowPin] = useState(false);
+  const [pinValue, setPinValue] = useState("");
+  const [pinMsg, setPinMsg] = useState<string | null>(null);
+
   // Relais en cours de saisie (quelle pièce, vers qui)
   const [relaisOpenFor, setRelaisOpenFor] = useState<number | null>(null);
   const [relaisTarget, setRelaisTarget] = useState<string>("");
@@ -269,13 +274,16 @@ export function PiecesBoard({
     refetch();
   }
 
-  async function definirPin() {
-    setError(null);
-    const pin = window.prompt("Choisis ton code PIN (4 chiffres) :");
-    if (!pin) return;
-    const { error } = await setMyPinAction(pin);
-    if (error) return setError(error);
-    window.alert("PIN enregistré.");
+  async function submitPin(e: React.FormEvent) {
+    e.preventDefault();
+    setPinMsg(null);
+    if (!/^\d{4,8}$/.test(pinValue)) {
+      return setPinMsg("Le PIN doit contenir 4 à 8 chiffres.");
+    }
+    const { error } = await setMyPinAction(pinValue);
+    if (error) return setPinMsg(error);
+    setPinValue("");
+    setShowPin(false);
   }
 
   async function createPiece(e: React.FormEvent) {
@@ -335,7 +343,7 @@ export function PiecesBoard({
   });
 
   return (
-    <section className="space-y-8">
+    <section className="space-y-10">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>
@@ -349,7 +357,10 @@ export function PiecesBoard({
             {filtered.length} pièce{filtered.length > 1 ? "s" : ""}
           </span>
           <button
-            onClick={definirPin}
+            onClick={() => {
+              setPinMsg(null);
+              setShowPin(true);
+            }}
             className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
           >
             Mon PIN
@@ -406,6 +417,39 @@ export function PiecesBoard({
           ))}
         </div>
       ) : null}
+
+      <Modal
+        open={showPin}
+        onClose={() => setShowPin(false)}
+        title="Mon code PIN"
+      >
+        <form onSubmit={submitPin} className="space-y-4">
+          <p className="text-sm text-white/60">
+            Ce code confirme ton identité pour accepter un relais (4 à 8
+            chiffres).
+          </p>
+          {pinMsg ? (
+            <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300">
+              {pinMsg}
+            </p>
+          ) : null}
+          <input
+            type="password"
+            inputMode="numeric"
+            autoFocus
+            value={pinValue}
+            onChange={(e) => setPinValue(e.target.value)}
+            placeholder="Nouveau PIN"
+            className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-400"
+          >
+            Enregistrer le PIN
+          </button>
+        </form>
+      </Modal>
 
       <Modal
         open={showForm}
@@ -536,35 +580,47 @@ export function PiecesBoard({
         </form>
       </Modal>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher (n° série, OF, réf., opération)…"
-          className="min-w-64 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none"
-        />
-        <select
-          value={filtreSecteur}
-          onChange={(e) => setFiltreSecteur(e.target.value)}
-          className="rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none"
-        >
-          <option value="">Tous les secteurs</option>
-          {poles.map((p) => (
-            <option key={p.id} value={p.libelle}>
-              {p.libelle}
-            </option>
-          ))}
-        </select>
-        <div className="inline-flex overflow-hidden rounded-lg border border-white/10 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher…"
+            className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none sm:w-64"
+          />
+          <select
+            value={filtreSecteur}
+            onChange={(e) => setFiltreSecteur(e.target.value)}
+            className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none"
+          >
+            <option value="">Tous les secteurs</option>
+            {poles.map((p) => (
+              <option key={p.id} value={p.libelle}>
+                {p.libelle}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Onglets distincts Actives / Archive */}
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/15 p-1">
           <button
             onClick={() => setVue("actives")}
-            className={`px-3 py-1.5 ${vue === "actives" ? "bg-indigo-500 text-white" : "text-white/70 hover-gold"}`}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+              vue === "actives"
+                ? "bg-indigo-500 text-white shadow"
+                : "text-white/70 hover-gold"
+            }`}
           >
             Actives
           </button>
           <button
             onClick={() => setVue("archive")}
-            className={`px-3 py-1.5 ${vue === "archive" ? "bg-indigo-500 text-white" : "text-white/70 hover-gold"}`}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+              vue === "archive"
+                ? "bg-[#CFB53B] text-black shadow"
+                : "text-white/70 hover-gold"
+            }`}
           >
             Archive
           </button>
