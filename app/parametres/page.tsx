@@ -92,7 +92,7 @@ export default async function ParametresPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#00356b]/85 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#1e2952]/85 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <span
@@ -234,6 +234,12 @@ export default async function ParametresPage() {
             </p>
             <p>Version v1 · registre d’événements immuable.</p>
           </div>
+          <Link
+            href="/showcase"
+            className="mt-4 inline-block rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+          >
+            Voir le showcase (MagicBento) →
+          </Link>
         </Section>
       </main>
     </div>
