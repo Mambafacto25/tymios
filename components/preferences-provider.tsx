@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { savePrefsAction } from "@/app/actions/profile";
@@ -93,18 +94,19 @@ export function PreferencesProvider({
     root.dataset.font = prefs.font || "sans";
   }, [prefs]);
 
+  const prefsRef = useRef(prefs);
+  prefsRef.current = prefs;
+
   const setPrefs = useCallback((p: Partial<Prefs>) => {
-    setState((prev) => {
-      const next = { ...prev, ...p };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      // Sauvegarde sur le compte (best effort).
-      void savePrefsAction(next as Record<string, unknown>);
-      return next;
-    });
+    const next = { ...prefsRef.current, ...p };
+    setState(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    // Sauvegarde sur le compte (best effort, hors rendu).
+    void savePrefsAction(next as Record<string, unknown>);
   }, []);
 
   return <Ctx.Provider value={{ prefs, setPrefs }}>{children}</Ctx.Provider>;
