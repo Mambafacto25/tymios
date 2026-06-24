@@ -16,6 +16,7 @@ import {
   corrigerTempsAction,
 } from "@/app/actions/pieces";
 import { OfImport } from "@/components/of-import";
+import { Modal } from "@/components/modal";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
@@ -347,10 +348,10 @@ export function PiecesBoard({
           </button>
           <OfImport />
           <button
-            onClick={() => setShowForm((v) => !v)}
+            onClick={() => setShowForm(true)}
             className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400"
           >
-            {showForm ? "Fermer" : "+ Nouvelle pièce"}
+            + Nouvelle pièce
           </button>
         </div>
       </div>
@@ -398,11 +399,21 @@ export function PiecesBoard({
         </div>
       ) : null}
 
-      {showForm ? (
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="Nouvelle pièce"
+      >
         <form
           onSubmit={createPiece}
-          className="grid grid-cols-1 gap-4 rounded-xl border border-white/10 bg-white/5 p-5 sm:grid-cols-2"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         >
+          {error ? (
+            <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300 sm:col-span-2">
+              {error}
+            </p>
+          ) : null}
+
           {ofs.length > 0 ? (
             <label className="space-y-1 sm:col-span-2">
               <span className="text-sm text-white/70">
@@ -515,7 +526,7 @@ export function PiecesBoard({
             </button>
           </div>
         </form>
-      ) : null}
+      </Modal>
 
       <div className="flex flex-wrap items-center gap-2">
         <input

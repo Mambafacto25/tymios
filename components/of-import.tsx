@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { importOfsAction } from "@/app/actions/ofs";
+import { Modal } from "@/components/modal";
 
 function splitLine(line: string, delim: string): string[] {
   const out: string[] = [];
@@ -111,16 +112,20 @@ export function OfImport() {
   }
 
   return (
-    <div className="inline-block">
+    <>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(true)}
         className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
       >
         Importer OF
       </button>
 
-      {open ? (
-        <div className="mt-3 space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Importer des OF (CSV)"
+      >
+        <div className="space-y-3">
           <p className="text-sm text-white/70">
             Importe un export CSV de ton ERP. Colonnes reconnues :{" "}
             <code className="text-white/90">numero_of</code> (obligatoire),{" "}
@@ -156,7 +161,7 @@ export function OfImport() {
             {msg ? <span className="text-sm text-white/70">{msg}</span> : null}
           </div>
         </div>
-      ) : null}
-    </div>
+      </Modal>
+    </>
   );
 }
