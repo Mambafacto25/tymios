@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { savePrefsAction } from "@/app/actions/profile";
 
 export type Prefs = {
   textColor: string; // hex, "" = blanc par défaut
@@ -53,18 +54,34 @@ export function computeTextColor(
 
 export function PreferencesProvider({
   children,
+  initialPrefs,
 }: {
   children: React.ReactNode;
+  initialPrefs?: Partial<Prefs> | null;
 }) {
-  const [prefs, setState] = useState<Prefs>(DEFAULT);
+  const hasInitial = Boolean(initialPrefs && Object.keys(initialPrefs).length);
+  const [prefs, setState] = useState<Prefs>({
+    ...DEFAULT,
+    ...(initialPrefs ?? {}),
+  });
 
+  // Si rien n'est sauvegardé sur le compte, on retombe sur l'appareil local.
   useEffect(() => {
+    if (hasInitial) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...DEFAULT, ...initialPrefs }));
+      } catch {
+        // ignore
+      }
+      return;
+    }
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setState({ ...DEFAULT, ...JSON.parse(raw) });
     } catch {
       // ignore
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -84,6 +101,8 @@ export function PreferencesProvider({
       } catch {
         // ignore
       }
+      // Sauvegarde sur le compte (best effort).
+      void savePrefsAction(next as Record<string, unknown>);
       return next;
     });
   }, []);

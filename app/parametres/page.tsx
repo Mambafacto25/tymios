@@ -141,7 +141,10 @@ export default async function ParametresPage() {
           description="Personnalise l’affichage (enregistré sur cet appareil)."
         >
           <AppearanceSettings
-            secteurs={secteurs.map((s) => ({ libelle: s.libelle }))}
+            secteurs={secteurs.map((s) => ({
+              libelle: s.libelle,
+              couleur: s.couleur,
+            }))}
           />
         </Section>
 

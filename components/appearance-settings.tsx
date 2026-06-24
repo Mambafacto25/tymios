@@ -23,7 +23,7 @@ const FONTS = [
 export function AppearanceSettings({
   secteurs,
 }: {
-  secteurs: { libelle: string }[];
+  secteurs: { libelle: string; couleur: string | null }[];
 }) {
   const { prefs, setPrefs } = usePreferences();
 
@@ -147,19 +147,39 @@ export function AppearanceSettings({
         <div className="mb-2 text-sm text-white/70">
           Secteur affiché par défaut
         </div>
-        <select
-          value={prefs.secteurDefaut}
-          onChange={(e) => setPrefs({ secteurDefaut: e.target.value })}
-          className="w-full max-w-xs rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none sm:w-72"
-        >
-          <option value="">Tous les secteurs</option>
-          {secteurs.map((s) => (
-            <option key={s.libelle} value={s.libelle}>
-              {s.libelle}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1.5 text-xs text-white/45">
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={() => setPrefs({ secteurDefaut: "" })}
+            className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
+              prefs.secteurDefaut === ""
+                ? "border-[#CFB53B] bg-[#CFB53B]/15 text-white"
+                : "border-white/10 bg-white/[0.04] text-white/70 hover-gold"
+            }`}
+          >
+            Tous
+          </button>
+          {secteurs.map((s) => {
+            const active = prefs.secteurDefaut === s.libelle;
+            return (
+              <button
+                key={s.libelle}
+                onClick={() => setPrefs({ secteurDefaut: active ? "" : s.libelle })}
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                  active
+                    ? "border-[#CFB53B] bg-[#CFB53B]/15 text-white"
+                    : "border-white/10 bg-white/[0.04] text-white/70 hover-gold"
+                }`}
+              >
+                <span
+                  className="inline-block h-3 w-3 rounded-full"
+                  style={{ backgroundColor: s.couleur ?? "#6b7280" }}
+                />
+                {s.libelle}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs text-white/45">
           Le tableau de bord s’ouvrira filtré sur ce secteur.
         </p>
       </div>

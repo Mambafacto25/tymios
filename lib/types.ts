@@ -15,6 +15,19 @@ export const STATUTS: PieceStatut[] = [
   "terminee",
 ];
 
+/** Niveaux d'urgence (stockés dans pieces.priorite : 0 à 3). */
+export type Urgence = { value: number; label: string; color: string };
+export const URGENCES: Urgence[] = [
+  { value: 0, label: "Basse", color: "#34D399" },
+  { value: 1, label: "Moyenne", color: "#FBBF24" },
+  { value: 2, label: "Haute", color: "#FB923C" },
+  { value: 3, label: "Urgence", color: "#F87171" },
+];
+export const SEUIL_URGENCE = 3;
+export function urgenceOf(priorite: number): Urgence {
+  return URGENCES[Math.max(0, Math.min(URGENCES.length - 1, priorite))];
+}
+
 /** Ligne de pièce telle que lue par le tableau de bord (avec jointures). */
 export type PieceRow = {
   id: number;

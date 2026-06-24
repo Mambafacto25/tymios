@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PIECE_SELECT } from "@/lib/queries";
 import {
@@ -19,11 +19,13 @@ import { OfImport } from "@/components/of-import";
 import { Modal } from "@/components/modal";
 import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
 import { usePreferences } from "@/components/preferences-provider";
-import { BentoGrid, BentoCard } from "@/components/magic-bento/bento";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
   STATUTS,
+  URGENCES,
+  SEUIL_URGENCE,
+  urgenceOf,
   type Atelier,
   type Of,
   type Personne,
@@ -54,14 +56,6 @@ function nom(p: { prenom: string; nom: string } | null): string {
   return p ? `${p.prenom} ${p.nom}` : "—";
 }
 
-/** "#10b981" -> "16, 185, 129" (pour les lueurs Bento). */
-function hexToRgbStr(hex: string): string {
-  const h = hex.replace("#", "");
-  const n = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  const i = parseInt(n, 16);
-  return `${(i >> 16) & 255}, ${(i >> 8) & 255}, ${i & 255}`;
-}
-
 function totalSec(piece: PieceRow): number {
   return (piece.temps ?? []).reduce((s, t) => s + (t.duree_sec ?? 0), 0);
 }
@@ -90,6 +84,7 @@ export function PiecesBoard({
   userId,
 }: Props) {
   const supabase = createClient();
+  const router = useRouter();
   const [pieces, setPieces] = useState<PieceRow[]>(initialPieces);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -116,7 +111,7 @@ export function PiecesBoard({
   // Secteur affiché par défaut (préférence utilisateur).
   const { prefs } = usePreferences();
   useEffect(() => {
-    if (prefs.secteurDefaut) setFiltreSecteur(prefs.secteurDefaut);
+    setFiltreSecteur(prefs.secteurDefaut);
   }, [prefs.secteurDefaut]);
 
   // Champs du formulaire de création
@@ -126,7 +121,7 @@ export function PiecesBoard({
   const [numeroOf, setNumeroOf] = useState("");
   const [designation, setDesignation] = useState("");
   const [echeance, setEcheance] = useState("");
-  const [prioritaire, setPrioritaire] = useState(false);
+  const [urgence, setUrgence] = useState(0);
   const [ofId, setOfId] = useState<number | "">("");
 
   function appliquerOf(id: number | "") {
@@ -311,7 +306,7 @@ export function PiecesBoard({
       numero_of: numeroOf.trim() || null,
       designation_article: designation.trim() || null,
       atelier_id: atelier.id,
-      priorite: prioritaire ? 1 : 0,
+      priorite: urgence,
       echeance: echeance || null,
     });
     if (error) {
@@ -325,7 +320,7 @@ export function PiecesBoard({
     setNumeroOf("");
     setDesignation("");
     setEcheance("");
-    setPrioritaire(false);
+    setUrgence(0);
     setOfId("");
     setShowForm(false);
     setBusy(false);
@@ -350,6 +345,206 @@ export function PiecesBoard({
       return false;
     return true;
   });
+
+  // Urgences du jour (niveau « Urgence », non terminées) — uniquement en vue Actives.
+  const urgences =
+    vue === "actives"
+      ? filtered.filter(
+          (p) => p.priorite >= SEUIL_URGENCE && p.statut_courant !== "terminee",
+        )
+      : [];
+  const urgenceIds = new Set(urgences.map((p) => p.id));
+  const reste = filtered.filter((p) => !urgenceIds.has(p.id));
+
+  const renderCard = (p: PieceRow) => {
+    const urg = urgenceOf(p.priorite);
+    return (
+      <div
+        key={p.id}
+        onClick={() => router.push(`/pieces/${p.id}`)}
+        className="task-card relative cursor-pointer rounded-2xl border bg-white/[0.035] p-5"
+        style={{
+          borderColor: `${urg.color}66`,
+          boxShadow: `0 0 0 1px ${urg.color}22, 0 0 16px ${urg.color}33`,
+        }}
+      >
+        <div className="flex h-full flex-col gap-3">
+          {/* En-tête : titre + statut */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: urg.color }}
+                  title={`Urgence : ${urg.label}`}
+                />
+                <span className="truncate font-semibold">
+                  {p.titre_operation}
+                </span>
+              </div>
+              {[p.numero_serie, p.numero_of, p.designation_article].filter(
+                Boolean,
+              ).length > 0 ? (
+                <div className="mt-0.5 truncate text-xs text-white/40">
+                  {[p.numero_serie, p.numero_of, p.designation_article]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+              ) : null}
+            </div>
+            <select
+              value={p.statut_courant}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => changeStatut(p, e.target.value as PieceStatut)}
+              className={`shrink-0 cursor-pointer rounded-full border-0 px-2.5 py-1 text-xs outline-none ${STATUT_CLASSES[p.statut_courant]}`}
+            >
+              {STATUTS.map((s) => (
+                <option key={s} value={s} className="bg-neutral-900">
+                  {STATUT_LABEL[s]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Secteur · propriétaire · échéance */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">
+            {p.atelier?.pole ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{
+                    backgroundColor: p.atelier.pole.couleur ?? "#6b7280",
+                  }}
+                />
+                {p.atelier.pole.libelle}
+              </span>
+            ) : null}
+            <span>{nom(p.proprietaire)}</span>
+            <span className="text-white/45">{formatEcheance(p.echeance)}</span>
+          </div>
+
+          {/* Bas de carte : temps + relais (clics protégés) */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="mt-auto flex items-center justify-between gap-2 border-t border-white/5 pt-3"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="tabular-nums text-sm text-white/80">
+                {chrono[p.id]
+                  ? formatChrono(Math.round((now - chrono[p.id]) / 1000))
+                  : formatDuree(totalSec(p))}
+              </span>
+              {p.proprietaire_courant_id === userId ? (
+                <span className="flex items-center gap-2">
+                  {chrono[p.id] ? (
+                    <button
+                      onClick={() => arreterChrono(p)}
+                      title="Arrêter le chrono"
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:opacity-90"
+                    >
+                      <IconStop className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => demarrerChrono(p.id)}
+                      title="Démarrer le chrono"
+                      style={{ backgroundColor: "#66FF00" }}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+                    >
+                      <IconPlay className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => pointerManuel(p)}
+                    title="Saisie manuelle"
+                    style={{ backgroundColor: "#89CFF0" }}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+                  >
+                    <IconPlus className="h-4 w-4" />
+                  </button>
+                  {totalSec(p) > 0 ? (
+                    <button
+                      onClick={() => corrigerTemps(p)}
+                      title="Corriger le temps"
+                      style={{ backgroundColor: "#CCCCFF" }}
+                      className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+                    >
+                      <IconPencil className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
+                </span>
+              ) : null}
+            </div>
+
+            <div>
+              {p.relais_vers_id ? (
+                <div className="flex items-center gap-2 text-xs text-amber-300">
+                  <span>→ {nom(p.destinataire)}</span>
+                  {p.proprietaire_courant_id === userId ? (
+                    <button
+                      onClick={() => annulerEnvoi(p)}
+                      className="hover-gold rounded border border-white/15 px-2 py-0.5 text-white/70"
+                    >
+                      Annuler
+                    </button>
+                  ) : null}
+                </div>
+              ) : p.proprietaire_courant_id === userId ? (
+                relaisOpenFor === p.id ? (
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={relaisTarget}
+                      onChange={(e) => setRelaisTarget(e.target.value)}
+                      className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs outline-none"
+                    >
+                      <option value="">— à qui ? —</option>
+                      {autresUtilisateurs.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.prenom} {u.nom}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        if (!relaisTarget) return;
+                        envoiRelais(p, relaisTarget);
+                        setRelaisOpenFor(null);
+                        setRelaisTarget("");
+                      }}
+                      className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white transition hover:bg-indigo-400"
+                    >
+                      Envoyer
+                    </button>
+                    <button
+                      onClick={() => setRelaisOpenFor(null)}
+                      className="px-1 text-white/50"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setRelaisOpenFor(p.id);
+                      setRelaisTarget("");
+                    }}
+                    style={{
+                      background:
+                        "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
+                    }}
+                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
+                  >
+                    Relais
+                    <span aria-hidden>→</span>
+                  </button>
+                )
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <section className="space-y-10">
@@ -567,14 +762,19 @@ export function PiecesBoard({
             />
           </label>
 
-          <label className="flex items-center gap-2 sm:col-span-2">
-            <input
-              type="checkbox"
-              checked={prioritaire}
-              onChange={(e) => setPrioritaire(e.target.checked)}
-              className="h-4 w-4"
-            />
-            <span className="text-sm text-white/70">Pièce prioritaire</span>
+          <label className="space-y-1 sm:col-span-2">
+            <span className="text-sm text-white/70">Niveau d’urgence</span>
+            <select
+              value={urgence}
+              onChange={(e) => setUrgence(Number(e.target.value))}
+              className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 outline-none focus:border-white/30"
+            >
+              {URGENCES.map((u) => (
+                <option key={u.value} value={u.value}>
+                  {u.label}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="sm:col-span-2">
@@ -622,39 +822,17 @@ export function PiecesBoard({
         </div>
       </div>
 
-      {/* Secteurs cliquables — filtre par secteur */}
-      <div className="flex flex-wrap gap-2.5">
-        <button
-          onClick={() => setFiltreSecteur("")}
-          className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
-            filtreSecteur === ""
-              ? "border-[#CFB53B] bg-[#CFB53B]/15 text-white"
-              : "border-white/10 bg-white/[0.04] text-white/70 hover-gold"
-          }`}
-        >
-          Tous
-        </button>
-        {poles.map((p) => {
-          const active = filtreSecteur === p.libelle;
-          return (
-            <button
-              key={p.id}
-              onClick={() => setFiltreSecteur(active ? "" : p.libelle)}
-              className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition ${
-                active
-                  ? "border-[#CFB53B] bg-[#CFB53B]/15 text-white"
-                  : "border-white/10 bg-white/[0.04] text-white/70 hover-gold"
-              }`}
-            >
-              <span
-                className="inline-block h-3 w-3 rounded-full"
-                style={{ backgroundColor: p.couleur ?? "#6b7280" }}
-              />
-              {p.libelle}
-            </button>
-          );
-        })}
-      </div>
+      {/* Urgences du jour */}
+      {urgences.length > 0 ? (
+        <div className="space-y-4 rounded-2xl border border-red-500/40 bg-red-500/[0.06] p-5 shadow-[0_0_24px_rgba(248,113,113,0.18)]">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-red-300">
+            🚨 Urgences du jour ({urgences.length})
+          </h3>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {urgences.map((p) => renderCard(p))}
+          </div>
+        </div>
+      ) : null}
 
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/15 p-10 text-center text-sm text-white/50">
@@ -662,200 +840,11 @@ export function PiecesBoard({
             ? "Aucune pièce. Clique sur « + Nouvelle pièce » pour en créer une."
             : "Aucune pièce ne correspond à la recherche / au filtre."}
         </div>
-      ) : (
-        <BentoGrid
-          glowColor="207, 181, 59"
-          className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {filtered.map((p) => {
-            const glow = p.atelier?.pole?.couleur
-              ? hexToRgbStr(p.atelier.pole.couleur)
-              : "207, 181, 59";
-            return (
-              <BentoCard key={p.id} glowColor={glow} className="p-5">
-                <div className="relative z-10 flex h-full flex-col gap-3">
-                  {/* En-tête : titre + statut */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        {p.priorite > 0 ? (
-                          <span title="Prioritaire" className="text-amber-400">
-                            ●
-                          </span>
-                        ) : null}
-                        <Link
-                          href={`/pieces/${p.id}`}
-                          className="truncate font-semibold hover:underline"
-                        >
-                          {p.titre_operation}
-                        </Link>
-                      </div>
-                      {[p.numero_serie, p.numero_of, p.designation_article]
-                        .filter(Boolean).length > 0 ? (
-                        <div className="mt-0.5 truncate text-xs text-white/40">
-                          {[p.numero_serie, p.numero_of, p.designation_article]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </div>
-                      ) : null}
-                    </div>
-                    <select
-                      value={p.statut_courant}
-                      onChange={(e) =>
-                        changeStatut(p, e.target.value as PieceStatut)
-                      }
-                      className={`shrink-0 cursor-pointer rounded-full border-0 px-2.5 py-1 text-xs outline-none ${STATUT_CLASSES[p.statut_courant]}`}
-                    >
-                      {STATUTS.map((s) => (
-                        <option key={s} value={s} className="bg-neutral-900">
-                          {STATUT_LABEL[s]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Secteur · propriétaire · échéance */}
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">
-                    {p.atelier?.pole ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span
-                          className="inline-block h-2.5 w-2.5 rounded-full"
-                          style={{
-                            backgroundColor: p.atelier.pole.couleur ?? "#6b7280",
-                          }}
-                        />
-                        {p.atelier.pole.libelle}
-                      </span>
-                    ) : null}
-                    <span>{nom(p.proprietaire)}</span>
-                    <span className="text-white/45">
-                      {formatEcheance(p.echeance)}
-                    </span>
-                  </div>
-
-                  {/* Bas de carte : temps + relais */}
-                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/5 pt-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="tabular-nums text-sm text-white/80">
-                        {chrono[p.id]
-                          ? formatChrono(
-                              Math.round((now - chrono[p.id]) / 1000),
-                            )
-                          : formatDuree(totalSec(p))}
-                      </span>
-                      {p.proprietaire_courant_id === userId ? (
-                        <span className="flex items-center gap-2">
-                          {chrono[p.id] ? (
-                            <button
-                              onClick={() => arreterChrono(p)}
-                              title="Arrêter le chrono"
-                              className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:opacity-90"
-                            >
-                              <IconStop className="h-3.5 w-3.5" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => demarrerChrono(p.id)}
-                              title="Démarrer le chrono"
-                              style={{ backgroundColor: "#66FF00" }}
-                              className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
-                            >
-                              <IconPlay className="h-4 w-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => pointerManuel(p)}
-                            title="Saisie manuelle"
-                            style={{ backgroundColor: "#89CFF0" }}
-                            className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
-                          >
-                            <IconPlus className="h-4 w-4" />
-                          </button>
-                          {totalSec(p) > 0 ? (
-                            <button
-                              onClick={() => corrigerTemps(p)}
-                              title="Corriger le temps"
-                              style={{ backgroundColor: "#CCCCFF" }}
-                              className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
-                            >
-                              <IconPencil className="h-3.5 w-3.5" />
-                            </button>
-                          ) : null}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div>
-                      {p.relais_vers_id ? (
-                        <div className="flex items-center gap-2 text-xs text-amber-300">
-                          <span>→ {nom(p.destinataire)}</span>
-                          {p.proprietaire_courant_id === userId ? (
-                            <button
-                              onClick={() => annulerEnvoi(p)}
-                              className="hover-gold rounded border border-white/15 px-2 py-0.5 text-white/70"
-                            >
-                              Annuler
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : p.proprietaire_courant_id === userId ? (
-                        relaisOpenFor === p.id ? (
-                          <div className="flex items-center gap-1">
-                            <select
-                              value={relaisTarget}
-                              onChange={(e) => setRelaisTarget(e.target.value)}
-                              className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs outline-none"
-                            >
-                              <option value="">— à qui ? —</option>
-                              {autresUtilisateurs.map((u) => (
-                                <option key={u.id} value={u.id}>
-                                  {u.prenom} {u.nom}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => {
-                                if (!relaisTarget) return;
-                                envoiRelais(p, relaisTarget);
-                                setRelaisOpenFor(null);
-                                setRelaisTarget("");
-                              }}
-                              className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white transition hover:bg-indigo-400"
-                            >
-                              Envoyer
-                            </button>
-                            <button
-                              onClick={() => setRelaisOpenFor(null)}
-                              className="px-1 text-white/50"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setRelaisOpenFor(p.id);
-                              setRelaisTarget("");
-                            }}
-                            style={{
-                              background:
-                                "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
-                            }}
-                            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
-                          >
-                            Relais
-                            <span aria-hidden>→</span>
-                          </button>
-                        )
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </BentoCard>
-            );
-          })}
-        </BentoGrid>
-      )}
+      ) : reste.length > 0 ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {reste.map((p) => renderCard(p))}
+        </div>
+      ) : null}
     </section>
   );
 }

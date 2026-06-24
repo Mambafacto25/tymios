@@ -22,3 +22,19 @@ export async function updateProfileAction(
     .eq("id", user.id);
   return error ? { error: error.message } : {};
 }
+
+/** Sauvegarde les préférences d'affichage sur le compte. */
+export async function savePrefsAction(
+  prefs: Record<string, unknown>,
+): Promise<Result> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Non authentifié" };
+  const { error } = await supabase
+    .from("users")
+    .update({ prefs })
+    .eq("id", user.id);
+  return error ? { error: error.message } : {};
+}
