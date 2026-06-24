@@ -1,0 +1,56 @@
+.bento-section {
+  position: relative;
+}
+
+.bento-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+
+  --glow-x: 50%;
+  --glow-y: 50%;
+  --glow-intensity: 0;
+  --glow-radius: 240px;
+}
+
+.bento-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Lueur de bord qui suit le curseur */
+.bento-card--glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  background: radial-gradient(
+    var(--glow-radius) circle at var(--glow-x) var(--glow-y),
+    rgba(var(--glow-color, 139, 92, 246), calc(var(--glow-intensity) * 0.9)) 0%,
+    rgba(var(--glow-color, 139, 92, 246), calc(var(--glow-intensity) * 0.4)) 30%,
+    transparent 60%
+  );
+  border-radius: inherit;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.bento-spotlight {
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  pointer-events: none;
+}

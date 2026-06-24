@@ -93,7 +93,7 @@ export default async function ParametresPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#191970]/85 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0a0638]/85 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <span

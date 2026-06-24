@@ -32,7 +32,7 @@ export function Modal({ open, onClose, title, children }: Props) {
       onClick={onClose}
     >
       <div
-        className="my-auto w-full max-w-2xl rounded-2xl border border-white/15 bg-[#23237e] shadow-2xl shadow-black/50"
+        className="my-auto w-full max-w-2xl rounded-2xl border border-white/15 bg-[#171049] shadow-2xl shadow-black/50"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">

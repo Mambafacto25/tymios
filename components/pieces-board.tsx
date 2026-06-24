@@ -19,6 +19,7 @@ import { OfImport } from "@/components/of-import";
 import { Modal } from "@/components/modal";
 import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
 import { usePreferences } from "@/components/preferences-provider";
+import { BentoGrid, BentoCard } from "@/components/magic-bento/bento";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
@@ -51,6 +52,14 @@ function formatEcheance(date: string | null): string {
 
 function nom(p: { prenom: string; nom: string } | null): string {
   return p ? `${p.prenom} ${p.nom}` : "—";
+}
+
+/** "#10b981" -> "16, 185, 129" (pour les lueurs Bento). */
+function hexToRgbStr(hex: string): string {
+  const h = hex.replace("#", "");
+  const n = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const i = parseInt(n, 16);
+  return `${(i >> 16) & 255}, ${(i >> 8) & 255}, ${i & 255}`;
 }
 
 function totalSec(piece: PieceRow): number {
@@ -581,26 +590,12 @@ export function PiecesBoard({
       </Modal>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher…"
-            className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none sm:w-64"
-          />
-          <select
-            value={filtreSecteur}
-            onChange={(e) => setFiltreSecteur(e.target.value)}
-            className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none"
-          >
-            <option value="">Tous les secteurs</option>
-            {poles.map((p) => (
-              <option key={p.id} value={p.libelle}>
-                {p.libelle}
-              </option>
-            ))}
-          </select>
-        </div>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Rechercher…"
+          className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none sm:w-64"
+        />
 
         {/* Onglets distincts Actives / Archive */}
         <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/15 p-1">
@@ -627,80 +622,89 @@ export function PiecesBoard({
         </div>
       </div>
 
+      {/* Secteurs cliquables — filtre par secteur */}
+      <div className="flex flex-wrap gap-2.5">
+        <button
+          onClick={() => setFiltreSecteur("")}
+          className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
+            filtreSecteur === ""
+              ? "border-[#CFB53B] bg-[#CFB53B]/15 text-white"
+              : "border-white/10 bg-white/[0.04] text-white/70 hover-gold"
+          }`}
+        >
+          Tous
+        </button>
+        {poles.map((p) => {
+          const active = filtreSecteur === p.libelle;
+          return (
+            <button
+              key={p.id}
+              onClick={() => setFiltreSecteur(active ? "" : p.libelle)}
+              className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                active
+                  ? "border-[#CFB53B] bg-[#CFB53B]/15 text-white"
+                  : "border-white/10 bg-white/[0.04] text-white/70 hover-gold"
+              }`}
+            >
+              <span
+                className="inline-block h-3 w-3 rounded-full"
+                style={{ backgroundColor: p.couleur ?? "#6b7280" }}
+              />
+              {p.libelle}
+            </button>
+          );
+        })}
+      </div>
+
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/15 p-8 text-center text-sm text-white/50">
+        <div className="rounded-2xl border border-dashed border-white/15 p-10 text-center text-sm text-white/50">
           {pieces.length === 0
             ? "Aucune pièce. Clique sur « + Nouvelle pièce » pour en créer une."
             : "Aucune pièce ne correspond à la recherche / au filtre."}
         </div>
       ) : (
-        <div className="gold-frame overflow-x-auto rounded-2xl bg-white/[0.02]">
-          <table className="w-full text-sm">
-            <thead className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wider text-white/45">
-              <tr>
-                <th className="px-4 py-3 font-medium">Opération</th>
-                <th className="px-4 py-3 font-medium">Secteur</th>
-                <th className="px-4 py-3 font-medium">Propriétaire</th>
-                <th className="px-4 py-3 font-medium">Échéance</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-                <th className="px-4 py-3 font-medium">Temps</th>
-                <th className="px-4 py-3 font-medium">Relais</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr
-                  key={p.id}
-                  className="border-t border-white/5 hover:bg-white/[0.03]"
-                >
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-2">
-                      {p.priorite > 0 ? (
-                        <span title="Prioritaire" className="text-amber-400">
-                          ●
-                        </span>
-                      ) : null}
-                      <Link
-                        href={`/pieces/${p.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {p.titre_operation}
-                      </Link>
-                    </div>
-                    <div className="text-xs text-white/40">
+        <BentoGrid
+          glowColor="207, 181, 59"
+          className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {filtered.map((p) => {
+            const glow = p.atelier?.pole?.couleur
+              ? hexToRgbStr(p.atelier.pole.couleur)
+              : "207, 181, 59";
+            return (
+              <BentoCard key={p.id} glowColor={glow} className="p-5">
+                <div className="relative z-10 flex h-full flex-col gap-3">
+                  {/* En-tête : titre + statut */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {p.priorite > 0 ? (
+                          <span title="Prioritaire" className="text-amber-400">
+                            ●
+                          </span>
+                        ) : null}
+                        <Link
+                          href={`/pieces/${p.id}`}
+                          className="truncate font-semibold hover:underline"
+                        >
+                          {p.titre_operation}
+                        </Link>
+                      </div>
                       {[p.numero_serie, p.numero_of, p.designation_article]
-                        .filter(Boolean)
-                        .join(" · ")}
+                        .filter(Boolean).length > 0 ? (
+                        <div className="mt-0.5 truncate text-xs text-white/40">
+                          {[p.numero_serie, p.numero_of, p.designation_article]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      ) : null}
                     </div>
-                  </td>
-                  <td className="px-4 py-4 text-white/70">
-                    {p.atelier?.pole ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{
-                            backgroundColor: p.atelier.pole.couleur ?? "#6b7280",
-                          }}
-                        />
-                        {p.atelier.pole.libelle}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-white/70">
-                    {nom(p.proprietaire)}
-                  </td>
-                  <td className="px-4 py-4 text-white/70">
-                    {formatEcheance(p.echeance)}
-                  </td>
-                  <td className="px-4 py-4">
                     <select
                       value={p.statut_courant}
                       onChange={(e) =>
                         changeStatut(p, e.target.value as PieceStatut)
                       }
-                      className={`cursor-pointer rounded-full border-0 px-2.5 py-1 text-xs outline-none ${STATUT_CLASSES[p.statut_courant]}`}
+                      className={`shrink-0 cursor-pointer rounded-full border-0 px-2.5 py-1 text-xs outline-none ${STATUT_CLASSES[p.statut_courant]}`}
                     >
                       {STATUTS.map((s) => (
                         <option key={s} value={s} className="bg-neutral-900">
@@ -708,10 +712,31 @@ export function PiecesBoard({
                         </option>
                       ))}
                     </select>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <span className="tabular-nums text-white/80">
+                  </div>
+
+                  {/* Secteur · propriétaire · échéance */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">
+                    {p.atelier?.pole ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{
+                            backgroundColor: p.atelier.pole.couleur ?? "#6b7280",
+                          }}
+                        />
+                        {p.atelier.pole.libelle}
+                      </span>
+                    ) : null}
+                    <span>{nom(p.proprietaire)}</span>
+                    <span className="text-white/45">
+                      {formatEcheance(p.echeance)}
+                    </span>
+                  </div>
+
+                  {/* Bas de carte : temps + relais */}
+                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/5 pt-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="tabular-nums text-sm text-white/80">
                         {chrono[p.id]
                           ? formatChrono(
                               Math.round((now - chrono[p.id]) / 1000),
@@ -759,78 +784,77 @@ export function PiecesBoard({
                         </span>
                       ) : null}
                     </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    {p.relais_vers_id ? (
-                      <div className="flex items-center gap-2 text-xs text-amber-300">
-                        <span>→ {nom(p.destinataire)} (en transit)</span>
-                        {p.proprietaire_courant_id === userId ? (
-                          <button
-                            onClick={() => annulerEnvoi(p)}
-                            className="rounded border border-white/15 px-2 py-0.5 text-white/70 transition hover:bg-white/5"
-                          >
-                            Annuler
-                          </button>
-                        ) : null}
-                      </div>
-                    ) : p.proprietaire_courant_id === userId ? (
-                      relaisOpenFor === p.id ? (
-                        <div className="flex items-center gap-1">
-                          <select
-                            value={relaisTarget}
-                            onChange={(e) => setRelaisTarget(e.target.value)}
-                            className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs outline-none"
-                          >
-                            <option value="">— à qui ? —</option>
-                            {autresUtilisateurs.map((u) => (
-                              <option key={u.id} value={u.id}>
-                                {u.prenom} {u.nom}
-                              </option>
-                            ))}
-                          </select>
+
+                    <div>
+                      {p.relais_vers_id ? (
+                        <div className="flex items-center gap-2 text-xs text-amber-300">
+                          <span>→ {nom(p.destinataire)}</span>
+                          {p.proprietaire_courant_id === userId ? (
+                            <button
+                              onClick={() => annulerEnvoi(p)}
+                              className="hover-gold rounded border border-white/15 px-2 py-0.5 text-white/70"
+                            >
+                              Annuler
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : p.proprietaire_courant_id === userId ? (
+                        relaisOpenFor === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <select
+                              value={relaisTarget}
+                              onChange={(e) => setRelaisTarget(e.target.value)}
+                              className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs outline-none"
+                            >
+                              <option value="">— à qui ? —</option>
+                              {autresUtilisateurs.map((u) => (
+                                <option key={u.id} value={u.id}>
+                                  {u.prenom} {u.nom}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => {
+                                if (!relaisTarget) return;
+                                envoiRelais(p, relaisTarget);
+                                setRelaisOpenFor(null);
+                                setRelaisTarget("");
+                              }}
+                              className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white transition hover:bg-indigo-400"
+                            >
+                              Envoyer
+                            </button>
+                            <button
+                              onClick={() => setRelaisOpenFor(null)}
+                              className="px-1 text-white/50"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
                           <button
                             onClick={() => {
-                              if (!relaisTarget) return;
-                              envoiRelais(p, relaisTarget);
-                              setRelaisOpenFor(null);
+                              setRelaisOpenFor(p.id);
                               setRelaisTarget("");
                             }}
-                            className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white transition hover:bg-indigo-400"
+                            style={{
+                              background:
+                                "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
+                            }}
+                            className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
                           >
-                            Envoyer
+                            Relais
+                            <span aria-hidden>→</span>
                           </button>
-                          <button
-                            onClick={() => setRelaisOpenFor(null)}
-                            className="px-1 text-white/50"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setRelaisOpenFor(p.id);
-                            setRelaisTarget("");
-                          }}
-                          style={{
-                            background:
-                              "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
-                          }}
-                          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
-                        >
-                          Relais
-                          <span aria-hidden>→</span>
-                        </button>
-                      )
-                    ) : (
-                      <span className="text-white/30">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        )
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </BentoCard>
+            );
+          })}
+        </BentoGrid>
       )}
     </section>
   );
