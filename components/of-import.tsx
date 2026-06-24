@@ -114,7 +114,7 @@ export function OfImport() {
     <div className="inline-block">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="rounded-md border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+        className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
       >
         Importer OF
       </button>

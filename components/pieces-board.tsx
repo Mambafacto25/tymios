@@ -329,8 +329,8 @@ export function PiecesBoard({
     <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-lg font-medium">Pièces</h2>
-          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400">
+          <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
             <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
             Temps réel
           </span>
@@ -341,14 +341,14 @@ export function PiecesBoard({
           </span>
           <button
             onClick={definirPin}
-            className="rounded-md border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
           >
             Mon PIN
           </button>
           <OfImport />
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="rounded-md bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-400"
+            className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400"
           >
             {showForm ? "Fermer" : "+ Nouvelle pièce"}
           </button>
@@ -522,12 +522,12 @@ export function PiecesBoard({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Rechercher (n° série, OF, réf., opération)…"
-          className="min-w-64 flex-1 rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none focus:border-white/30"
+          className="min-w-64 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none"
         />
         <select
           value={filtreSecteur}
           onChange={(e) => setFiltreSecteur(e.target.value)}
-          className="rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none focus:border-white/30"
+          className="rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none"
         >
           <option value="">Tous les secteurs</option>
           {poles.map((p) => (
@@ -536,7 +536,7 @@ export function PiecesBoard({
             </option>
           ))}
         </select>
-        <div className="inline-flex overflow-hidden rounded-md border border-white/10 text-sm">
+        <div className="inline-flex overflow-hidden rounded-lg border border-white/10 text-sm">
           <button
             onClick={() => setVue("actives")}
             className={`px-3 py-1.5 ${vue === "actives" ? "bg-indigo-500 text-white" : "text-white/70 hover:bg-white/5"}`}
@@ -559,17 +559,17 @@ export function PiecesBoard({
             : "Aucune pièce ne correspond à la recherche / au filtre."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/10">
+        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02]">
           <table className="w-full text-sm">
-            <thead className="bg-white/5 text-left text-white/60">
+            <thead className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wider text-white/45">
               <tr>
-                <th className="px-4 py-2 font-medium">Opération</th>
-                <th className="px-4 py-2 font-medium">Secteur</th>
-                <th className="px-4 py-2 font-medium">Propriétaire</th>
-                <th className="px-4 py-2 font-medium">Échéance</th>
-                <th className="px-4 py-2 font-medium">Statut</th>
-                <th className="px-4 py-2 font-medium">Temps</th>
-                <th className="px-4 py-2 font-medium">Relais</th>
+                <th className="px-4 py-2.5 font-medium">Opération</th>
+                <th className="px-4 py-2.5 font-medium">Secteur</th>
+                <th className="px-4 py-2.5 font-medium">Propriétaire</th>
+                <th className="px-4 py-2.5 font-medium">Échéance</th>
+                <th className="px-4 py-2.5 font-medium">Statut</th>
+                <th className="px-4 py-2.5 font-medium">Temps</th>
+                <th className="px-4 py-2.5 font-medium">Relais</th>
               </tr>
             </thead>
             <tbody>
