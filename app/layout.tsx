@@ -3,7 +3,7 @@ import "./globals.css";
 import { PreferencesProvider } from "@/components/preferences-provider";
 
 export const metadata: Metadata = {
-  title: "Relais",
+  title: "Tymios",
   description:
     "Suivi de pièces, relais entre établis et pointage du temps — atelier horloger",
 };

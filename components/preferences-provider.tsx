@@ -9,12 +9,20 @@ import {
 } from "react";
 
 export type Prefs = {
-  textColor: string; // "" = défaut
+  textColor: string; // hex, "" = blanc par défaut
+  intensite: number; // 0.5 – 1 (opacité du texte)
+  luminosite: number; // 0.6 – 1.4 (clarté du texte)
   font: string; // sans | serif | mono | rounded
   secteurDefaut: string; // "" = tous
 };
 
-const DEFAULT: Prefs = { textColor: "", font: "sans", secteurDefaut: "" };
+const DEFAULT: Prefs = {
+  textColor: "",
+  intensite: 1,
+  luminosite: 1,
+  font: "sans",
+  secteurDefaut: "",
+};
 const STORAGE_KEY = "relais-prefs";
 
 const Ctx = createContext<{
@@ -26,6 +34,23 @@ export function usePreferences() {
   return useContext(Ctx);
 }
 
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  const n = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const int = parseInt(n || "eaf2fb", 16);
+  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
+
+export function computeTextColor(
+  base: string,
+  luminosite: number,
+  intensite: number,
+): string {
+  const [r, g, b] = hexToRgb(base || "#eaf2fb");
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v * luminosite)));
+  return `rgba(${clamp(r)}, ${clamp(g)}, ${clamp(b)}, ${intensite})`;
+}
+
 export function PreferencesProvider({
   children,
 }: {
@@ -33,7 +58,6 @@ export function PreferencesProvider({
 }) {
   const [prefs, setState] = useState<Prefs>(DEFAULT);
 
-  // Charge les préférences sauvegardées au montage.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -43,11 +67,12 @@ export function PreferencesProvider({
     }
   }, []);
 
-  // Applique police + couleur de texte à <html>.
   useEffect(() => {
     const root = document.documentElement;
-    if (prefs.textColor) root.style.setProperty("--fg", prefs.textColor);
-    else root.style.removeProperty("--fg");
+    root.style.setProperty(
+      "--fg",
+      computeTextColor(prefs.textColor, prefs.luminosite, prefs.intensite),
+    );
     root.dataset.font = prefs.font || "sans";
   }, [prefs]);
 
