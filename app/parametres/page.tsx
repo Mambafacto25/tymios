@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Brand } from "@/components/brand";
 import { IconGear } from "@/components/icons";
 import { ProfileForm, PinForm } from "@/components/settings-account";
+import { AppearanceSettings } from "@/components/appearance-settings";
 
 type Profil = {
   prenom: string;
@@ -105,7 +106,7 @@ export default async function ParametresPage() {
           </div>
           <Link
             href="/"
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+            className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
           >
             ← Retour
           </Link>
@@ -133,6 +134,15 @@ export default async function ParametresPage() {
           description="Le PIN confirme ton identité pour accepter un relais."
         >
           <PinForm pinDefini={Boolean(profil?.pin_hash)} />
+        </Section>
+
+        <Section
+          title="Apparence"
+          description="Personnalise l’affichage (enregistré sur cet appareil)."
+        >
+          <AppearanceSettings
+            secteurs={secteurs.map((s) => ({ libelle: s.libelle }))}
+          />
         </Section>
 
         <Section
@@ -236,7 +246,7 @@ export default async function ParametresPage() {
           </div>
           <Link
             href="/showcase"
-            className="mt-4 inline-block rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+            className="mt-4 inline-block hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
           >
             Voir le showcase (MagicBento) →
           </Link>

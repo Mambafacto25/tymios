@@ -115,7 +115,7 @@ export function OfImport() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+        className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
       >
         Importer OF
       </button>

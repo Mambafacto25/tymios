@@ -18,6 +18,7 @@ import {
 import { OfImport } from "@/components/of-import";
 import { Modal } from "@/components/modal";
 import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
+import { usePreferences } from "@/components/preferences-provider";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
@@ -97,6 +98,12 @@ export function PiecesBoard({
   const [query, setQuery] = useState("");
   const [filtreSecteur, setFiltreSecteur] = useState("");
   const [vue, setVue] = useState<"actives" | "archive">("actives");
+
+  // Secteur affiché par défaut (préférence utilisateur).
+  const { prefs } = usePreferences();
+  useEffect(() => {
+    if (prefs.secteurDefaut) setFiltreSecteur(prefs.secteurDefaut);
+  }, [prefs.secteurDefaut]);
 
   // Champs du formulaire de création
   const [titre, setTitre] = useState("");
@@ -343,7 +350,7 @@ export function PiecesBoard({
           </span>
           <button
             onClick={definirPin}
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+            className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
           >
             Mon PIN
           </button>
@@ -551,13 +558,13 @@ export function PiecesBoard({
         <div className="inline-flex overflow-hidden rounded-lg border border-white/10 text-sm">
           <button
             onClick={() => setVue("actives")}
-            className={`px-3 py-1.5 ${vue === "actives" ? "bg-indigo-500 text-white" : "text-white/70 hover:bg-white/5"}`}
+            className={`px-3 py-1.5 ${vue === "actives" ? "bg-indigo-500 text-white" : "text-white/70 hover-gold"}`}
           >
             Actives
           </button>
           <button
             onClick={() => setVue("archive")}
-            className={`px-3 py-1.5 ${vue === "archive" ? "bg-indigo-500 text-white" : "text-white/70 hover:bg-white/5"}`}
+            className={`px-3 py-1.5 ${vue === "archive" ? "bg-indigo-500 text-white" : "text-white/70 hover-gold"}`}
           >
             Archive
           </button>
@@ -571,7 +578,7 @@ export function PiecesBoard({
             : "Aucune pièce ne correspond à la recherche / au filtre."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02]">
+        <div className="gold-frame overflow-x-auto rounded-2xl bg-white/[0.02]">
           <table className="w-full text-sm">
             <thead className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wider text-white/45">
               <tr>

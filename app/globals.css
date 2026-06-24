@@ -12,16 +12,34 @@
 html,
 body {
   min-height: 100%;
-  color: var(--foreground);
+}
+
+/* Police choisie dans les paramètres (data-font sur <html>) */
+html[data-font="serif"] {
+  --app-font: Georgia, "Times New Roman", serif;
+}
+html[data-font="mono"] {
+  --app-font: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+html[data-font="rounded"] {
+  --app-font: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
 }
 
 body {
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Couleur de texte choisie dans les paramètres (--fg), sinon défaut */
+  color: var(--fg, var(--foreground));
+  font-family: var(
+    --app-font,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif
+  );
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   background-color: var(--background);
-  /* Profondeur discrète sur le fond bleu */
   background-image:
     radial-gradient(
       80rem 42rem at 50% -14rem,
@@ -32,7 +50,41 @@ body {
   background-attachment: fixed;
 }
 
-/* Barre de défilement discrète, cohérente avec le thème sombre */
+/* Survol doré translucide (onglets / boutons secondaires) */
+.hover-gold {
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+.hover-gold:hover {
+  background-color: rgba(207, 181, 59, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(207, 181, 59, 0.4);
+}
+
+/* Liseré or lumineux autour du tableau principal */
+.gold-frame {
+  border: 1px solid rgba(207, 181, 59, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(207, 181, 59, 0.12),
+    0 0 22px rgba(207, 181, 59, 0.22);
+  animation: gold-pulse 3.5s ease-in-out infinite;
+}
+@keyframes gold-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(207, 181, 59, 0.12),
+      0 0 18px rgba(207, 181, 59, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(207, 181, 59, 0.2),
+      0 0 28px rgba(207, 181, 59, 0.32);
+  }
+}
+
+/* Barre de défilement discrète */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
@@ -52,7 +104,6 @@ body {
   background-clip: padding-box;
 }
 
-/* Champs de formulaire : rendu homogène et focus accentué */
 input,
 select,
 textarea,
@@ -63,8 +114,8 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
   outline: none;
-  border-color: rgba(129, 140, 248, 0.6);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+  border-color: rgba(207, 181, 59, 0.6);
+  box-shadow: 0 0 0 3px rgba(207, 181, 59, 0.18);
 }
 
 @media print {
@@ -75,5 +126,6 @@ textarea:focus-visible {
   body {
     background: #fff;
     background-image: none;
+    color: #000;
   }
 }

@@ -50,7 +50,7 @@ export default async function HomePage() {
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+                className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
               >
                 Déconnexion
               </button>
