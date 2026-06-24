@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PreferencesProvider } from "@/components/preferences-provider";
 
 export const metadata: Metadata = {
   title: "Relais",
@@ -12,7 +13,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <PreferencesProvider>{children}</PreferencesProvider>
+      </body>
     </html>
   );
 }

@@ -16,6 +16,9 @@ import {
   corrigerTempsAction,
 } from "@/app/actions/pieces";
 import { OfImport } from "@/components/of-import";
+import { Modal } from "@/components/modal";
+import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
+import { usePreferences } from "@/components/preferences-provider";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
@@ -95,6 +98,12 @@ export function PiecesBoard({
   const [query, setQuery] = useState("");
   const [filtreSecteur, setFiltreSecteur] = useState("");
   const [vue, setVue] = useState<"actives" | "archive">("actives");
+
+  // Secteur affiché par défaut (préférence utilisateur).
+  const { prefs } = usePreferences();
+  useEffect(() => {
+    if (prefs.secteurDefaut) setFiltreSecteur(prefs.secteurDefaut);
+  }, [prefs.secteurDefaut]);
 
   // Champs du formulaire de création
   const [titre, setTitre] = useState("");
@@ -326,7 +335,7 @@ export function PiecesBoard({
   });
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>
@@ -341,16 +350,16 @@ export function PiecesBoard({
           </span>
           <button
             onClick={definirPin}
-            className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+            className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
           >
             Mon PIN
           </button>
           <OfImport />
           <button
-            onClick={() => setShowForm((v) => !v)}
+            onClick={() => setShowForm(true)}
             className="rounded-lg bg-indigo-500 px-3 py-1.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-400"
           >
-            {showForm ? "Fermer" : "+ Nouvelle pièce"}
+            + Nouvelle pièce
           </button>
         </div>
       </div>
@@ -398,11 +407,21 @@ export function PiecesBoard({
         </div>
       ) : null}
 
-      {showForm ? (
+      <Modal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        title="Nouvelle pièce"
+      >
         <form
           onSubmit={createPiece}
-          className="grid grid-cols-1 gap-4 rounded-xl border border-white/10 bg-white/5 p-5 sm:grid-cols-2"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         >
+          {error ? (
+            <p className="rounded-lg bg-red-500/15 px-3 py-2 text-sm text-red-300 sm:col-span-2">
+              {error}
+            </p>
+          ) : null}
+
           {ofs.length > 0 ? (
             <label className="space-y-1 sm:col-span-2">
               <span className="text-sm text-white/70">
@@ -515,14 +534,14 @@ export function PiecesBoard({
             </button>
           </div>
         </form>
-      ) : null}
+      </Modal>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Rechercher (n° série, OF, réf., opération)…"
-          className="min-w-64 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 text-sm outline-none"
+          className="min-w-64 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none"
         />
         <select
           value={filtreSecteur}
@@ -539,13 +558,13 @@ export function PiecesBoard({
         <div className="inline-flex overflow-hidden rounded-lg border border-white/10 text-sm">
           <button
             onClick={() => setVue("actives")}
-            className={`px-3 py-1.5 ${vue === "actives" ? "bg-indigo-500 text-white" : "text-white/70 hover:bg-white/5"}`}
+            className={`px-3 py-1.5 ${vue === "actives" ? "bg-indigo-500 text-white" : "text-white/70 hover-gold"}`}
           >
             Actives
           </button>
           <button
             onClick={() => setVue("archive")}
-            className={`px-3 py-1.5 ${vue === "archive" ? "bg-indigo-500 text-white" : "text-white/70 hover:bg-white/5"}`}
+            className={`px-3 py-1.5 ${vue === "archive" ? "bg-indigo-500 text-white" : "text-white/70 hover-gold"}`}
           >
             Archive
           </button>
@@ -559,17 +578,17 @@ export function PiecesBoard({
             : "Aucune pièce ne correspond à la recherche / au filtre."}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.02]">
+        <div className="gold-frame overflow-x-auto rounded-2xl bg-white/[0.02]">
           <table className="w-full text-sm">
             <thead className="border-b border-white/10 bg-white/[0.03] text-left text-[11px] uppercase tracking-wider text-white/45">
               <tr>
-                <th className="px-4 py-2.5 font-medium">Opération</th>
-                <th className="px-4 py-2.5 font-medium">Secteur</th>
-                <th className="px-4 py-2.5 font-medium">Propriétaire</th>
-                <th className="px-4 py-2.5 font-medium">Échéance</th>
-                <th className="px-4 py-2.5 font-medium">Statut</th>
-                <th className="px-4 py-2.5 font-medium">Temps</th>
-                <th className="px-4 py-2.5 font-medium">Relais</th>
+                <th className="px-4 py-3 font-medium">Opération</th>
+                <th className="px-4 py-3 font-medium">Secteur</th>
+                <th className="px-4 py-3 font-medium">Propriétaire</th>
+                <th className="px-4 py-3 font-medium">Échéance</th>
+                <th className="px-4 py-3 font-medium">Statut</th>
+                <th className="px-4 py-3 font-medium">Temps</th>
+                <th className="px-4 py-3 font-medium">Relais</th>
               </tr>
             </thead>
             <tbody>
@@ -578,7 +597,7 @@ export function PiecesBoard({
                   key={p.id}
                   className="border-t border-white/5 hover:bg-white/[0.03]"
                 >
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       {p.priorite > 0 ? (
                         <span title="Prioritaire" className="text-amber-400">
@@ -598,7 +617,7 @@ export function PiecesBoard({
                         .join(" · ")}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-white/70">
+                  <td className="px-4 py-4 text-white/70">
                     {p.atelier?.pole ? (
                       <span className="inline-flex items-center gap-1.5">
                         <span
@@ -613,13 +632,13 @@ export function PiecesBoard({
                       "—"
                     )}
                   </td>
-                  <td className="px-4 py-3 text-white/70">
+                  <td className="px-4 py-4 text-white/70">
                     {nom(p.proprietaire)}
                   </td>
-                  <td className="px-4 py-3 text-white/70">
+                  <td className="px-4 py-4 text-white/70">
                     {formatEcheance(p.echeance)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-4">
                     <select
                       value={p.statut_courant}
                       onChange={(e) =>
@@ -634,8 +653,8 @@ export function PiecesBoard({
                       ))}
                     </select>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-3">
                       <span className="tabular-nums text-white/80">
                         {chrono[p.id]
                           ? formatChrono(
@@ -644,45 +663,48 @@ export function PiecesBoard({
                           : formatDuree(totalSec(p))}
                       </span>
                       {p.proprietaire_courant_id === userId ? (
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-2">
                           {chrono[p.id] ? (
                             <button
                               onClick={() => arreterChrono(p)}
                               title="Arrêter le chrono"
-                              className="rounded bg-red-500/80 px-1.5 py-0.5 text-xs text-white transition hover:bg-red-500"
+                              className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:opacity-90"
                             >
-                              ⏹
+                              <IconStop className="h-3.5 w-3.5" />
                             </button>
                           ) : (
                             <button
                               onClick={() => demarrerChrono(p.id)}
                               title="Démarrer le chrono"
-                              className="rounded bg-emerald-500/80 px-1.5 py-0.5 text-xs text-white transition hover:bg-emerald-500"
+                              style={{ backgroundColor: "#66FF00" }}
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
                             >
-                              ▶
+                              <IconPlay className="h-4 w-4" />
                             </button>
                           )}
                           <button
                             onClick={() => pointerManuel(p)}
                             title="Saisie manuelle"
-                            className="rounded border border-white/15 px-1.5 py-0.5 text-xs text-white/70 transition hover:bg-white/5"
+                            style={{ backgroundColor: "#89CFF0" }}
+                            className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
                           >
-                            +
+                            <IconPlus className="h-4 w-4" />
                           </button>
                           {totalSec(p) > 0 ? (
                             <button
                               onClick={() => corrigerTemps(p)}
                               title="Corriger le temps"
-                              className="rounded border border-white/15 px-1.5 py-0.5 text-xs text-white/70 transition hover:bg-white/5"
+                              style={{ backgroundColor: "#CCCCFF" }}
+                              className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
                             >
-                              ✎
+                              <IconPencil className="h-3.5 w-3.5" />
                             </button>
                           ) : null}
                         </span>
                       ) : null}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-4">
                     {p.relais_vers_id ? (
                       <div className="flex items-center gap-2 text-xs text-amber-300">
                         <span>→ {nom(p.destinataire)} (en transit)</span>
@@ -734,9 +756,14 @@ export function PiecesBoard({
                             setRelaisOpenFor(p.id);
                             setRelaisTarget("");
                           }}
-                          className="rounded-md border border-white/15 px-2.5 py-1 text-xs transition hover:bg-white/5"
+                          style={{
+                            background:
+                              "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
                         >
-                          Relais →
+                          Relais
+                          <span aria-hidden>→</span>
                         </button>
                       )
                     ) : (

@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { PIECE_SELECT } from "@/lib/queries";
 import { PiecesBoard } from "@/components/pieces-board";
 import { Brand } from "@/components/brand";
+import { IconGear } from "@/components/icons";
 import type { Atelier, Of, Personne, PieceRow, Pole } from "@/lib/types";
 
 export default async function HomePage() {
@@ -29,17 +31,26 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0a0c12]/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#003153]/85 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Brand subtitle="Atelier horloger" />
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-white/55 sm:inline">
+          <div className="flex items-center gap-4">
+            <span className="hidden text-sm text-white/60 sm:inline">
               {user?.email}
             </span>
+            <Link
+              href="/parametres"
+              aria-label="Paramètres"
+              title="Paramètres"
+              style={{ backgroundColor: "#CFB53B" }}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+            >
+              <IconGear className="h-5 w-5" />
+            </Link>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-white/15 px-3 py-1.5 text-sm transition hover:bg-white/5"
+                className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
               >
                 Déconnexion
               </button>
@@ -48,7 +59,7 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl p-6">
+      <main className="mx-auto max-w-6xl p-6 pt-8 sm:p-8 sm:pt-10">
         <PiecesBoard
           initialPieces={(piecesRes.data as unknown as PieceRow[]) ?? []}
           poles={(polesRes.data as Pole[]) ?? []}
