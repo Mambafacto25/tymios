@@ -112,7 +112,7 @@ export default async function ParametresPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl space-y-6 p-6">
+      <main className="mx-auto max-w-4xl space-y-8 p-6 pt-8 sm:p-8 sm:pt-10">
         <Section
           title="Mon profil"
           description="Tes informations personnelles."

@@ -59,7 +59,7 @@ export default async function HomePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl p-6">
+      <main className="mx-auto max-w-6xl p-6 pt-8 sm:p-8 sm:pt-10">
         <PiecesBoard
           initialPieces={(piecesRes.data as unknown as PieceRow[]) ?? []}
           poles={(polesRes.data as Pole[]) ?? []}

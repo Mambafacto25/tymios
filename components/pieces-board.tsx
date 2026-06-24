@@ -328,7 +328,7 @@ export function PiecesBoard({
   });
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-8">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>
@@ -749,9 +749,14 @@ export function PiecesBoard({
                             setRelaisOpenFor(p.id);
                             setRelaisTarget("");
                           }}
-                          className="rounded-md border border-white/15 px-2.5 py-1 text-xs transition hover:bg-white/5"
+                          style={{
+                            background:
+                              "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
                         >
-                          Relais →
+                          Relais
+                          <span aria-hidden>→</span>
                         </button>
                       )
                     ) : (
