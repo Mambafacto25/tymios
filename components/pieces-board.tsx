@@ -558,16 +558,18 @@ export function PiecesBoard({
         />
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-5">
           <div>
-            <div className="text-sm capitalize text-white/55">{dateStr}</div>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-              Bonjour {prenom}
-              {prenom ? " 👋" : "👋"}
-            </h2>
             {userSecteur ? (
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#CFB53B]/30 bg-[#CFB53B]/10 px-3 py-1 text-xs font-medium text-[#F0D879]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#CFB53B]/35 bg-[#CFB53B]/10 px-4 py-1.5 text-base font-medium text-[#F0D879]">
                 Pôle {userSecteur}
               </div>
             ) : null}
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              Bonjour {prenom}
+              {prenom ? " 👋" : "👋"}
+            </h2>
+            <div className="mt-1.5 text-sm capitalize text-white/55">
+              {dateStr}
+            </div>
             <p className="mt-2.5 text-sm text-white/70">
               {aFaire > 0
                 ? `Tu as ${aFaire} tâche${aFaire > 1 ? "s" : ""} à faire aujourd’hui.`

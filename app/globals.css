@@ -21,16 +21,17 @@ h3,
   letter-spacing: 0.1px;
 }
 
-/* Motif guilloché discret (fonds de cartes, bannière, état vide) */
+/* Motif guilloché en spirale (rose engine) — discret */
 .guilloche::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -10%;
   pointer-events: none;
-  opacity: 0.05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.6'%3E%3Ccircle cx='130' cy='130' r='26'/%3E%3Ccircle cx='130' cy='130' r='48'/%3E%3Ccircle cx='130' cy='130' r='70'/%3E%3Ccircle cx='130' cy='130' r='92'/%3E%3Ccircle cx='130' cy='130' r='114'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.1;
+  background-image: url("/guilloche.svg");
   background-position: center;
   background-repeat: no-repeat;
+  background-size: cover;
 }
 
 html,
