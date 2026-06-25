@@ -581,16 +581,15 @@ export function PiecesBoard({
               Bonjour {prenom}
               {prenom ? " 👋" : "👋"}
             </h2>
-            <div className="mt-1.5 text-sm capitalize text-white/55">
-              {dateStr}
-            </div>
             <p className="mt-2.5 text-sm text-white/70">
               {aFaire > 0
                 ? `Tu as ${aFaire} tâche${aFaire > 1 ? "s" : ""} à faire aujourd’hui.`
                 : "Aucune tâche en attente. Beau travail ! ✨"}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end gap-2.5">
+            <div className="text-base capitalize text-white/70">{dateStr}</div>
+            <div className="flex items-center gap-3">
             <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 backdrop-blur transition hover:scale-105">
               <span
                 className="text-3xl font-bold leading-none"
@@ -612,12 +611,35 @@ export function PiecesBoard({
                 </span>
               </div>
             ) : null}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Onglets Actives / Archive */}
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/15 p-1">
+          <button
+            onClick={() => setVue("actives")}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+              vue === "actives"
+                ? "bg-indigo-500 text-white shadow"
+                : "text-white/70 hover-gold"
+            }`}
+          >
+            Actives
+          </button>
+          <button
+            onClick={() => setVue("archive")}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+              vue === "archive"
+                ? "bg-[#CFB53B] text-black shadow"
+                : "text-white/70 hover-gold"
+            }`}
+          >
+            Archive
+          </button>
+        </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-white/50">
             {filtered.length} pièce{filtered.length > 1 ? "s" : ""}
@@ -919,38 +941,12 @@ export function PiecesBoard({
         </form>
       </Modal>
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher une pièce, un n° de série, un OF…"
-          className="w-full rounded-lg border border-white/10 bg-black/20 px-4 py-2.5 text-sm outline-none sm:w-[32rem]"
-        />
-
-        {/* Onglets distincts Actives / Archive */}
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-black/15 p-1">
-          <button
-            onClick={() => setVue("actives")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-              vue === "actives"
-                ? "bg-indigo-500 text-white shadow"
-                : "text-white/70 hover-gold"
-            }`}
-          >
-            Actives
-          </button>
-          <button
-            onClick={() => setVue("archive")}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-              vue === "archive"
-                ? "bg-[#CFB53B] text-black shadow"
-                : "text-white/70 hover-gold"
-            }`}
-          >
-            Archive
-          </button>
-        </div>
-      </div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Rechercher une pièce, un n° de série, un OF…"
+        className="w-full rounded-lg border border-white/10 bg-black/20 px-4 py-2.5 text-sm outline-none"
+      />
 
       {/* Urgences du jour */}
       {urgences.length > 0 ? (
