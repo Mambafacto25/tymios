@@ -18,10 +18,13 @@ import {
 import { OfImport } from "@/components/of-import";
 import { Modal } from "@/components/modal";
 import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
+import { Dial } from "@/components/dial";
 import { usePreferences } from "@/components/preferences-provider";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
+  STATUT_HEX,
+  STATUT_PROGRESS,
   STATUTS,
   URGENCES,
   SEUIL_URGENCE,
@@ -74,6 +77,14 @@ function formatChrono(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/** Libellé compact pour le centre du sous-cadran. */
+function formatCompact(sec: number): string {
+  if (sec <= 0) return "—";
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  return h > 0 ? `${h}h` : `${m}m`;
 }
 
 export function PiecesBoard({
@@ -395,7 +406,7 @@ export function PiecesBoard({
                   style={{ backgroundColor: urg.color }}
                   title={`Urgence : ${urg.label}`}
                 />
-                <span className="truncate font-semibold">
+                <span className="font-display truncate text-[15px] font-semibold">
                   {p.titre_operation}
                 </span>
               </div>
@@ -446,11 +457,15 @@ export function PiecesBoard({
             className="mt-auto flex items-center justify-between gap-2 border-t border-white/5 pt-3"
           >
             <div className="flex items-center gap-2.5">
-              <span className="tabular-nums text-sm text-white/80">
-                {chrono[p.id]
-                  ? formatChrono(Math.round((now - chrono[p.id]) / 1000))
-                  : formatDuree(totalSec(p))}
-              </span>
+              <Dial
+                progress={STATUT_PROGRESS[p.statut_courant]}
+                color={STATUT_HEX[p.statut_courant]}
+                label={
+                  chrono[p.id]
+                    ? formatChrono(Math.round((now - chrono[p.id]) / 1000))
+                    : formatCompact(totalSec(p))
+                }
+              />
               {p.proprietaire_courant_id === userId ? (
                 <span className="flex items-center gap-2">
                   {chrono[p.id] ? (
@@ -532,7 +547,7 @@ export function PiecesBoard({
   return (
     <section className="space-y-10">
       {/* Bandeau d'accueil */}
-      <div className="banner-enter relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-transparent p-6 sm:p-7">
+      <div className="banner-enter guilloche relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/15 via-slate-500/10 to-transparent p-6 sm:p-7">
         <div
           className="float-a pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full blur-3xl"
           style={{ backgroundColor: "rgba(99,102,241,0.28)" }}
@@ -940,10 +955,12 @@ export function PiecesBoard({
       ) : null}
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/15 p-10 text-center text-sm text-white/50">
-          {pieces.length === 0
-            ? "Aucune pièce. Clique sur « + Nouvelle pièce » pour en créer une."
-            : "Aucune pièce ne correspond à la recherche / au filtre."}
+        <div className="guilloche relative overflow-hidden rounded-2xl border border-dashed border-white/15 p-12 text-center text-sm text-white/50">
+          <span className="relative z-10">
+            {pieces.length === 0
+              ? "Aucune pièce. Clique sur « + Nouvelle pièce » pour en créer une."
+              : "Aucune pièce ne correspond à la recherche / au filtre."}
+          </span>
         </div>
       ) : reste.length > 0 ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

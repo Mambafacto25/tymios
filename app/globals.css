@@ -1,12 +1,36 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap");
 
 :root {
-  --background: #0a0638;
-  --foreground: #eaf2fb;
-  --muted: #9fb6d2;
-  --surface: rgba(255, 255, 255, 0.05);
-  --surface-border: rgba(255, 255, 255, 0.12);
+  --background: #0e1422;
+  --foreground: #e8edf5;
+  --muted: #9fb0c8;
+  --surface: rgba(255, 255, 255, 0.045);
+  --surface-border: rgba(255, 255, 255, 0.1);
   --accent: #6366f1;
+  --gold: #cdb06a;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+}
+
+/* Titres et accents en Fraunces (gravure horlogère) */
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.1px;
+}
+
+/* Motif guilloché discret (fonds de cartes, bannière, état vide) */
+.guilloche::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='0.6'%3E%3Ccircle cx='130' cy='130' r='26'/%3E%3Ccircle cx='130' cy='130' r='48'/%3E%3Ccircle cx='130' cy='130' r='70'/%3E%3Ccircle cx='130' cy='130' r='92'/%3E%3Ccircle cx='130' cy='130' r='114'/%3E%3C/g%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 html,

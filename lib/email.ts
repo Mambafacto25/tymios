@@ -32,13 +32,13 @@ export function renderEmail(
     : "";
 
   return `
-  <div style="background:#0a0638;padding:32px 16px;font-family:ui-sans-serif,system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <div style="background:#0e1422;padding:32px 16px;font-family:ui-sans-serif,system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.35)">
       <tr>
-        <td style="background:linear-gradient(135deg,#191970 0%,#2b2b8f 100%);padding:22px 26px">
+        <td style="background:linear-gradient(135deg,#0e1422 0%,#1c2742 100%);padding:22px 26px">
           <table role="presentation" width="100%"><tr>
-            <td style="color:#fff;font-weight:800;font-size:20px;letter-spacing:.3px">Tymios</td>
-            <td align="right" style="color:#c7d2fe;font-size:12px">Atelier horloger</td>
+            <td style="color:#F0D879;font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:22px;letter-spacing:.4px">Tymios</td>
+            <td align="right" style="color:#cbd5e1;font-size:12px">Atelier horloger</td>
           </tr></table>
         </td>
       </tr>

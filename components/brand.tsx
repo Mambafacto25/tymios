@@ -30,7 +30,9 @@ export function Brand({ subtitle }: { subtitle?: string }) {
     <div className="flex items-center gap-3">
       <Logo />
       <div className="leading-tight">
-        <div className="text-lg font-semibold tracking-tight">Tymios</div>
+        <div className="font-display text-xl font-semibold tracking-tight">
+          Tymios
+        </div>
         {subtitle ? (
           <div className="text-xs text-white/45">{subtitle}</div>
         ) : null}

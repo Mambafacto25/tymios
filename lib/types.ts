@@ -72,3 +72,19 @@ export const STATUT_CLASSES: Record<PieceStatut, string> = {
   bloquee: "bg-red-500/20 text-red-300",
   terminee: "bg-emerald-500/20 text-emerald-300",
 };
+
+/** Couleur (hex) par statut — pour le sous-cadran chronographe. */
+export const STATUT_HEX: Record<PieceStatut, string> = {
+  a_faire: "#9fb0c8",
+  en_cours: "#60a5fa",
+  bloquee: "#f87171",
+  terminee: "#34d399",
+};
+
+/** Avancement (0..1) par statut, pour l'arc du sous-cadran. */
+export const STATUT_PROGRESS: Record<PieceStatut, number> = {
+  a_faire: 0.1,
+  en_cours: 0.55,
+  bloquee: 0.55,
+  terminee: 1,
+};
