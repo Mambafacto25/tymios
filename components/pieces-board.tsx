@@ -356,6 +356,18 @@ export function PiecesBoard({
   const urgenceIds = new Set(urgences.map((p) => p.id));
   const reste = filtered.filter((p) => !urgenceIds.has(p.id));
 
+  // Bandeau d'accueil
+  const prenom = users.find((u) => u.id === userId)?.prenom ?? "";
+  const aFaire = pieces.filter(
+    (p) =>
+      p.proprietaire_courant_id === userId && p.statut_courant !== "terminee",
+  ).length;
+  const dateStr = new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
   const renderCard = (p: PieceRow) => {
     const urg = urgenceOf(p.priorite);
     return (
@@ -548,6 +560,55 @@ export function PiecesBoard({
 
   return (
     <section className="space-y-10">
+      {/* Bandeau d'accueil */}
+      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-transparent p-6 sm:p-7">
+        <div
+          className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full blur-3xl"
+          style={{ backgroundColor: "rgba(99,102,241,0.25)" }}
+        />
+        <div
+          className="pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full blur-3xl"
+          style={{ backgroundColor: "rgba(207,181,59,0.16)" }}
+        />
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-5">
+          <div>
+            <div className="text-sm capitalize text-white/55">{dateStr}</div>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+              Bonjour {prenom || "👋"}
+              {prenom ? " 👋" : ""}
+            </h2>
+            <p className="mt-1.5 text-sm text-white/70">
+              {aFaire > 0
+                ? `Tu as ${aFaire} tâche${aFaire > 1 ? "s" : ""} à faire aujourd’hui.`
+                : "Aucune tâche en attente. Beau travail ! ✨"}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 backdrop-blur">
+              <span
+                className="text-3xl font-bold leading-none"
+                style={{ color: "#F0D879" }}
+              >
+                {aFaire}
+              </span>
+              <span className="mt-1 text-[11px] uppercase tracking-wide text-white/55">
+                à faire
+              </span>
+            </div>
+            {urgences.length > 0 ? (
+              <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 backdrop-blur">
+                <span className="text-3xl font-bold leading-none text-red-300">
+                  {urgences.length}
+                </span>
+                <span className="mt-1 text-[11px] uppercase tracking-wide text-red-300/80">
+                  urgentes
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>

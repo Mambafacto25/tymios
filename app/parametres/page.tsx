@@ -238,22 +238,6 @@ export default async function ParametresPage() {
             </div>
           </div>
         </Section>
-
-        <Section title="À propos">
-          <div className="space-y-1 text-sm text-white/60">
-            <p>
-              <span className="text-white/80">Relais</span> — suivi de pièces,
-              relais entre établis et pointage du temps pour atelier horloger.
-            </p>
-            <p>Version v1 · registre d’événements immuable.</p>
-          </div>
-          <Link
-            href="/showcase"
-            className="mt-4 inline-block hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
-          >
-            Voir le showcase (MagicBento) →
-          </Link>
-        </Section>
       </main>
     </div>
   );
