@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { sendEmail, renderEmail, esc, appUrl } from "@/lib/email";
+import { sendEmail, renderEmail, esc, appUrl, detailLignes } from "@/lib/email";
 import type { PieceStatut } from "@/lib/types";
 
 type Result = { error?: string };
@@ -54,17 +54,19 @@ export async function createPieceAction(input: {
 
   // Email : au destinataire de la tâche.
   const cta = appUrl() ? { label: "Ouvrir Tymios", url: appUrl() } : undefined;
+  const details = detailLignes({
+    titre: input.titre_operation,
+    designation: input.designation_article,
+    numeroSerie: input.numero_serie,
+    numeroOf: input.numero_of,
+  });
   if (ownerId === user.id) {
     await sendEmail({
       to: user.email ?? "",
       subject: `Nouvelle tâche : ${input.titre_operation}`,
       html: renderEmail(
         "Nouvelle tâche créée",
-        [
-          `La tâche <strong>${esc(input.titre_operation)}</strong> a été créée.`,
-          input.numero_of ? `OF ${esc(input.numero_of)}` : "",
-          input.designation_article ? esc(input.designation_article) : "",
-        ],
+        ["Une nouvelle tâche a été créée :", ...details],
         cta,
       ),
     });
@@ -84,9 +86,8 @@ export async function createPieceAction(input: {
           "Une tâche t’a été assignée",
           [
             `Bonjour ${esc(dest.prenom)},`,
-            `<strong>${esc(par)}</strong> t’a assigné la tâche <strong>${esc(input.titre_operation)}</strong>.`,
-            input.numero_of ? `OF ${esc(input.numero_of)}` : "",
-            input.designation_article ? esc(input.designation_article) : "",
+            `<strong>${esc(par)}</strong> t’a assigné une tâche :`,
+            ...details,
           ],
           cta,
         ),
@@ -207,7 +208,7 @@ export async function envoiRelaisAction(
     supabase.from("users").select("email, prenom").eq("id", versId).single(),
     supabase
       .from("pieces")
-      .select("titre_operation, numero_of")
+      .select("titre_operation, numero_of, numero_serie, designation_article")
       .eq("id", pieceId)
       .single(),
     supabase.from("users").select("prenom, nom").eq("id", user.id).single(),
@@ -216,6 +217,8 @@ export async function envoiRelaisAction(
   const piece = pieceRes.data as {
     titre_operation: string;
     numero_of: string | null;
+    numero_serie: string | null;
+    designation_article: string | null;
   } | null;
   const moi = moiRes.data as { prenom: string; nom: string } | null;
   if (dest?.email) {
@@ -227,8 +230,13 @@ export async function envoiRelaisAction(
         "Une pièce t’a été transmise",
         [
           `Bonjour ${esc(dest.prenom)},`,
-          `<strong>${esc(expediteur)}</strong> t’a passé le relais de <strong>${esc(piece?.titre_operation ?? "une pièce")}</strong>.`,
-          piece?.numero_of ? `OF ${esc(piece.numero_of)}` : "",
+          `<strong>${esc(expediteur)}</strong> t’a passé le relais d’une pièce :`,
+          ...detailLignes({
+            titre: piece?.titre_operation,
+            designation: piece?.designation_article,
+            numeroSerie: piece?.numero_serie,
+            numeroOf: piece?.numero_of,
+          }),
           "Connecte-toi à Tymios pour la prendre (avec ton code PIN).",
         ],
         appUrl() ? { label: "Prendre la pièce", url: appUrl() } : undefined,

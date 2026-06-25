@@ -373,6 +373,9 @@ export function PiecesBoard({
   const reste = filtered.filter((p) => !urgenceIds.has(p.id));
 
   // Bandeau d'accueil
+  const bannerSecteur = prefs.secteurDefaut || userSecteur;
+  const bannerColor =
+    poles.find((p) => p.libelle === bannerSecteur)?.couleur ?? "#CDB06A";
   const prenom = users.find((u) => u.id === userId)?.prenom ?? "";
   const aFaire = pieces.filter(
     (p) =>
@@ -545,9 +548,9 @@ export function PiecesBoard({
   };
 
   return (
-    <section className="space-y-10">
+    <section className="space-y-6">
       {/* Bandeau d'accueil */}
-      <div className="banner-enter guilloche relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/15 via-slate-500/10 to-transparent p-6 sm:p-7">
+      <div className="banner-enter guilloche relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/15 via-slate-500/10 to-transparent p-5 sm:p-6">
         <div
           className="float-a pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full blur-3xl"
           style={{ backgroundColor: "rgba(99,102,241,0.28)" }}
@@ -558,9 +561,20 @@ export function PiecesBoard({
         />
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-5">
           <div>
-            {userSecteur ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#CFB53B]/35 bg-[#CFB53B]/10 px-4 py-1.5 text-base font-medium text-[#F0D879]">
-                Pôle {userSecteur}
+            {bannerSecteur ? (
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-base font-medium"
+                style={{
+                  borderColor: `${bannerColor}66`,
+                  backgroundColor: `${bannerColor}1f`,
+                  color: bannerColor,
+                }}
+              >
+                <span
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: bannerColor }}
+                />
+                Pôle {bannerSecteur}
               </div>
             ) : null}
             <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -603,13 +617,7 @@ export function PiecesBoard({
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">
-            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-            Temps réel
-          </span>
-        </div>
+        <h2 className="text-lg font-semibold tracking-tight">Pièces</h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-white/50">
             {filtered.length} pièce{filtered.length > 1 ? "s" : ""}
@@ -950,7 +958,7 @@ export function PiecesBoard({
           <h3 className="flex items-center gap-2 text-sm font-semibold text-red-300">
             🚨 Urgences du jour ({urgences.length})
           </h3>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {urgences.map((p) => renderCard(p))}
           </div>
         </div>
@@ -965,7 +973,7 @@ export function PiecesBoard({
           </span>
         </div>
       ) : reste.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {reste.map((p) => renderCard(p))}
         </div>
       ) : null}

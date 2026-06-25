@@ -61,6 +61,23 @@ export function renderEmail(
 
 export { esc };
 
+/** Lignes détaillées d'une pièce (opération, article, n° série, OF). */
+export function detailLignes(p: {
+  titre?: string | null;
+  designation?: string | null;
+  numeroSerie?: string | null;
+  numeroOf?: string | null;
+}): string[] {
+  const row = (label: string, val: string) =>
+    `<strong style="color:#0f172a">${esc(label)} :</strong> ${esc(val)}`;
+  const out: string[] = [];
+  if (p.titre) out.push(row("Opération", p.titre));
+  if (p.designation) out.push(row("Article", p.designation));
+  if (p.numeroSerie) out.push(row("N° de série", p.numeroSerie));
+  if (p.numeroOf) out.push(row("N° d’OF", p.numeroOf));
+  return out;
+}
+
 /** URL publique de l'app (pour les boutons d'email), si configurée. */
 export function appUrl(): string {
   return (
