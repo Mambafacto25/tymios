@@ -62,6 +62,31 @@ body {
   box-shadow: inset 0 0 0 1px rgba(207, 181, 59, 0.4);
 }
 
+/* Bannière d'accueil : entrée + halos flottants */
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.banner-enter {
+  animation: banner-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes float-a {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(8px, -10px); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-10px, 8px); }
+}
+.float-a { animation: float-a 7s ease-in-out infinite; }
+.float-b { animation: float-b 9s ease-in-out infinite; }
+
 /* Carte de tâche : légère animation au survol */
 .task-card {
   transition:

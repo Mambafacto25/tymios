@@ -14,7 +14,7 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [piecesRes, polesRes, ateliersRes, usersRes, ofsRes] =
+  const [piecesRes, polesRes, ateliersRes, usersRes, ofsRes, moiRes] =
     await Promise.all([
       supabase
         .from("pieces")
@@ -27,7 +27,16 @@ export default async function HomePage() {
         .from("ofs")
         .select("id, numero_of, designation_article, numero_serie, echeance")
         .order("numero_of"),
+      supabase
+        .from("users")
+        .select("pole:poles ( libelle )")
+        .eq("id", user!.id)
+        .single(),
     ]);
+
+  const userSecteur =
+    (moiRes.data as { pole: { libelle: string } | null } | null)?.pole
+      ?.libelle ?? "";
 
   return (
     <div className="min-h-screen">
@@ -67,6 +76,7 @@ export default async function HomePage() {
           users={(usersRes.data as Personne[]) ?? []}
           ofs={(ofsRes.data as Of[]) ?? []}
           userId={user!.id}
+          userSecteur={userSecteur}
         />
       </main>
     </div>

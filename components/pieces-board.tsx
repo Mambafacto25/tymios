@@ -41,6 +41,7 @@ type Props = {
   users: Personne[];
   ofs: Of[];
   userId: string;
+  userSecteur: string;
 };
 
 function formatEcheance(date: string | null): string {
@@ -82,6 +83,7 @@ export function PiecesBoard({
   users,
   ofs,
   userId,
+  userSecteur,
 }: Props) {
   const supabase = createClient();
   const router = useRouter();
@@ -95,8 +97,8 @@ export function PiecesBoard({
   const [pinValue, setPinValue] = useState("");
   const [pinMsg, setPinMsg] = useState<string | null>(null);
 
-  // Relais en cours de saisie (quelle pièce, vers qui)
-  const [relaisOpenFor, setRelaisOpenFor] = useState<number | null>(null);
+  // Relais en cours de saisie (quelle pièce, vers qui) — via pop-up
+  const [relaisPiece, setRelaisPiece] = useState<PieceRow | null>(null);
   const [relaisTarget, setRelaisTarget] = useState<string>("");
 
   // Chrono : pieceId -> timestamp (ms) de démarrage. `now` fait avancer l'affichage.
@@ -122,6 +124,7 @@ export function PiecesBoard({
   const [designation, setDesignation] = useState("");
   const [echeance, setEcheance] = useState("");
   const [urgence, setUrgence] = useState(0);
+  const [assigneA, setAssigneA] = useState(userId);
   const [ofId, setOfId] = useState<number | "">("");
 
   function appliquerOf(id: number | "") {
@@ -308,6 +311,7 @@ export function PiecesBoard({
       atelier_id: atelier.id,
       priorite: urgence,
       echeance: echeance || null,
+      proprietaireId: assigneA || userId,
     });
     if (error) {
       setBusy(false);
@@ -321,6 +325,7 @@ export function PiecesBoard({
     setDesignation("");
     setEcheance("");
     setUrgence(0);
+    setAssigneA(userId);
     setOfId("");
     setShowForm(false);
     setBusy(false);
@@ -502,54 +507,20 @@ export function PiecesBoard({
                   ) : null}
                 </div>
               ) : p.proprietaire_courant_id === userId ? (
-                relaisOpenFor === p.id ? (
-                  <div className="flex items-center gap-1">
-                    <select
-                      value={relaisTarget}
-                      onChange={(e) => setRelaisTarget(e.target.value)}
-                      className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs outline-none"
-                    >
-                      <option value="">— à qui ? —</option>
-                      {autresUtilisateurs.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.prenom} {u.nom}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => {
-                        if (!relaisTarget) return;
-                        envoiRelais(p, relaisTarget);
-                        setRelaisOpenFor(null);
-                        setRelaisTarget("");
-                      }}
-                      className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white transition hover:bg-indigo-400"
-                    >
-                      Envoyer
-                    </button>
-                    <button
-                      onClick={() => setRelaisOpenFor(null)}
-                      className="px-1 text-white/50"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setRelaisOpenFor(p.id);
-                      setRelaisTarget("");
-                    }}
-                    style={{
-                      background:
-                        "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
-                  >
-                    Relais
-                    <span aria-hidden>→</span>
-                  </button>
-                )
+                <button
+                  onClick={() => {
+                    setRelaisPiece(p);
+                    setRelaisTarget("");
+                  }}
+                  style={{
+                    background:
+                      "linear-gradient(180deg, #F0D879 0%, #E6C84D 45%, #CFB53B 100%)",
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-[#2a2200] shadow-md shadow-[#cfb53b]/20 ring-1 ring-[#a8902a]/40 transition hover:brightness-105 active:brightness-95"
+                >
+                  Relais
+                  <span aria-hidden>→</span>
+                </button>
               ) : null}
             </div>
           </div>
@@ -561,30 +532,35 @@ export function PiecesBoard({
   return (
     <section className="space-y-10">
       {/* Bandeau d'accueil */}
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-transparent p-6 sm:p-7">
+      <div className="banner-enter relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-indigo-500/20 via-violet-500/10 to-transparent p-6 sm:p-7">
         <div
-          className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full blur-3xl"
-          style={{ backgroundColor: "rgba(99,102,241,0.25)" }}
+          className="float-a pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full blur-3xl"
+          style={{ backgroundColor: "rgba(99,102,241,0.28)" }}
         />
         <div
-          className="pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full blur-3xl"
-          style={{ backgroundColor: "rgba(207,181,59,0.16)" }}
+          className="float-b pointer-events-none absolute -bottom-16 right-24 h-40 w-40 rounded-full blur-3xl"
+          style={{ backgroundColor: "rgba(207,181,59,0.18)" }}
         />
         <div className="relative z-10 flex flex-wrap items-center justify-between gap-5">
           <div>
             <div className="text-sm capitalize text-white/55">{dateStr}</div>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-              Bonjour {prenom || "👋"}
-              {prenom ? " 👋" : ""}
+              Bonjour {prenom}
+              {prenom ? " 👋" : "👋"}
             </h2>
-            <p className="mt-1.5 text-sm text-white/70">
+            {userSecteur ? (
+              <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#CFB53B]/30 bg-[#CFB53B]/10 px-3 py-1 text-xs font-medium text-[#F0D879]">
+                Pôle {userSecteur}
+              </div>
+            ) : null}
+            <p className="mt-2.5 text-sm text-white/70">
               {aFaire > 0
                 ? `Tu as ${aFaire} tâche${aFaire > 1 ? "s" : ""} à faire aujourd’hui.`
                 : "Aucune tâche en attente. Beau travail ! ✨"}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 backdrop-blur">
+            <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 backdrop-blur transition hover:scale-105">
               <span
                 className="text-3xl font-bold leading-none"
                 style={{ color: "#F0D879" }}
@@ -596,7 +572,7 @@ export function PiecesBoard({
               </span>
             </div>
             {urgences.length > 0 ? (
-              <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 backdrop-blur">
+              <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-red-500/30 bg-red-500/10 px-5 py-3 backdrop-blur transition hover:scale-105">
                 <span className="text-3xl font-bold leading-none text-red-300">
                   {urgences.length}
                 </span>
@@ -682,6 +658,58 @@ export function PiecesBoard({
           ))}
         </div>
       ) : null}
+
+      <Modal
+        open={!!relaisPiece}
+        onClose={() => setRelaisPiece(null)}
+        title="Passer le relais"
+      >
+        <div className="space-y-4">
+          {relaisPiece ? (
+            <p className="text-sm text-white/70">
+              Pièce :{" "}
+              <span className="font-medium text-white">
+                {relaisPiece.titre_operation}
+              </span>
+            </p>
+          ) : null}
+          <label className="block space-y-1.5">
+            <span className="text-sm text-white/70">Transmettre à</span>
+            <select
+              value={relaisTarget}
+              onChange={(e) => setRelaisTarget(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 outline-none"
+            >
+              <option value="">— choisir une personne —</option>
+              {autresUtilisateurs.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.prenom} {u.nom}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              disabled={!relaisTarget}
+              onClick={() => {
+                if (!relaisPiece || !relaisTarget) return;
+                envoiRelais(relaisPiece, relaisTarget);
+                setRelaisPiece(null);
+                setRelaisTarget("");
+              }}
+              className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-400 disabled:opacity-50"
+            >
+              Envoyer le relais
+            </button>
+            <button
+              onClick={() => setRelaisPiece(null)}
+              className="hover-gold rounded-lg border border-white/15 px-4 py-2 text-sm"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={showPin}
@@ -823,7 +851,7 @@ export function PiecesBoard({
             />
           </label>
 
-          <label className="space-y-1 sm:col-span-2">
+          <label className="space-y-1">
             <span className="text-sm text-white/70">Niveau d’urgence</span>
             <select
               value={urgence}
@@ -833,6 +861,22 @@ export function PiecesBoard({
               {URGENCES.map((u) => (
                 <option key={u.value} value={u.value}>
                   {u.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-sm text-white/70">Assigner à</span>
+            <select
+              value={assigneA}
+              onChange={(e) => setAssigneA(e.target.value)}
+              className="w-full rounded-md border border-white/10 bg-black/20 px-3 py-2 outline-none focus:border-white/30"
+            >
+              <option value={userId}>Moi-même</option>
+              {autresUtilisateurs.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.prenom} {u.nom}
                 </option>
               ))}
             </select>
@@ -854,8 +898,8 @@ export function PiecesBoard({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher…"
-          className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none sm:w-64"
+          placeholder="Rechercher une pièce, un n° de série, un OF…"
+          className="w-full rounded-lg border border-white/10 bg-black/20 px-4 py-2.5 text-sm outline-none sm:w-[32rem]"
         />
 
         {/* Onglets distincts Actives / Archive */}
