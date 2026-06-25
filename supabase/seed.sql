@@ -5,5 +5,6 @@ insert into poles (libelle, couleur, icone) values
   ('Qualité',        '#FEFF00', 'shield-check'),
   ('Logistique',     '#FFB700', 'truck'),
   ('Sous-traitance', '#DA72FC', 'building'),
-  ('Décoration',     '#FF595A', 'palette')
+  ('Décoration',     '#FF595A', 'palette'),
+  ('Horlogerie',     '#F700AE', 'watch')
 on conflict (libelle) do nothing;

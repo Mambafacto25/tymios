@@ -282,6 +282,53 @@ export async function refuserRelaisAction(pieceId: number): Promise<Result> {
   return error ? { error: error.message } : {};
 }
 
+/** Relance par email le propriétaire d'une pièce (retard). */
+export async function relancerAction(pieceId: number): Promise<Result> {
+  const { supabase } = await authed();
+  const { data } = await supabase
+    .from("pieces")
+    .select(
+      `titre_operation, numero_of, numero_serie, designation_article, echeance,
+       proprietaire:users!proprietaire_courant_id ( email, prenom )`,
+    )
+    .eq("id", pieceId)
+    .single();
+  const p = data as {
+    titre_operation: string;
+    numero_of: string | null;
+    numero_serie: string | null;
+    designation_article: string | null;
+    echeance: string | null;
+    proprietaire: { email: string; prenom: string } | null;
+  } | null;
+  if (!p?.proprietaire?.email) {
+    return { error: "Pas d'email pour le propriétaire de cette pièce." };
+  }
+  const ech = p.echeance
+    ? new Date(p.echeance).toLocaleDateString("fr-FR")
+    : "—";
+  await sendEmail({
+    to: p.proprietaire.email,
+    subject: `⏰ Rappel : « ${p.titre_operation} » en retard`,
+    html: renderEmail(
+      "Pièce en retard",
+      [
+        `Bonjour ${esc(p.proprietaire.prenom)},`,
+        `Cette pièce est <strong>en retard</strong> (échéance du ${esc(ech)}) :`,
+        ...detailLignes({
+          titre: p.titre_operation,
+          designation: p.designation_article,
+          numeroSerie: p.numero_serie,
+          numeroOf: p.numero_of,
+        }),
+        "Merci de la traiter ou de la passer en relais.",
+      ],
+      appUrl() ? { label: "Ouvrir Tymios", url: appUrl() } : undefined,
+    ),
+  });
+  return {};
+}
+
 export async function setMyPinAction(pin: string): Promise<Result> {
   const { supabase } = await authed();
   const { error } = await supabase.rpc("set_my_pin", { p_pin: pin });

@@ -19,6 +19,7 @@ import { OfImport } from "@/components/of-import";
 import { Modal } from "@/components/modal";
 import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
 import { Dial } from "@/components/dial";
+import { Pilotage } from "@/components/pilotage";
 import { usePreferences } from "@/components/preferences-provider";
 import {
   STATUT_CLASSES,
@@ -45,6 +46,7 @@ type Props = {
   ofs: Of[];
   userId: string;
   userSecteur: string;
+  isChef: boolean;
 };
 
 function formatEcheance(date: string | null): string {
@@ -95,6 +97,7 @@ export function PiecesBoard({
   ofs,
   userId,
   userSecteur,
+  isChef,
 }: Props) {
   const supabase = createClient();
   const router = useRouter();
@@ -119,7 +122,7 @@ export function PiecesBoard({
   // Recherche / filtres / vue (actives vs archive)
   const [query, setQuery] = useState("");
   const [filtreSecteur, setFiltreSecteur] = useState("");
-  const [vue, setVue] = useState<"actives" | "archive">("actives");
+  const [vue, setVue] = useState<"actives" | "archive" | "pilotage">("actives");
 
   // Secteur affiché par défaut (préférence utilisateur).
   const { prefs } = usePreferences();
@@ -381,6 +384,18 @@ export function PiecesBoard({
     (p) =>
       p.proprietaire_courant_id === userId && p.statut_courant !== "terminee",
   ).length;
+  const debutJour = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  })();
+  const enRetard = pieces.filter(
+    (p) =>
+      p.proprietaire_courant_id === userId &&
+      p.statut_courant !== "terminee" &&
+      p.echeance &&
+      new Date(p.echeance).getTime() < debutJour,
+  ).length;
   const dateStr = new Date().toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "numeric",
@@ -611,6 +626,16 @@ export function PiecesBoard({
                 </span>
               </div>
             ) : null}
+            {enRetard > 0 ? (
+              <div className="flex min-w-[5.5rem] flex-col items-center rounded-2xl border border-orange-500/40 bg-orange-500/10 px-5 py-3 backdrop-blur transition hover:scale-105">
+                <span className="text-3xl font-bold leading-none text-orange-300">
+                  {enRetard}
+                </span>
+                <span className="mt-1 text-[11px] uppercase tracking-wide text-orange-300/80">
+                  en retard
+                </span>
+              </div>
+            ) : null}
             </div>
           </div>
         </div>
@@ -639,6 +664,18 @@ export function PiecesBoard({
           >
             Archive
           </button>
+          {isChef ? (
+            <button
+              onClick={() => setVue("pilotage")}
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                vue === "pilotage"
+                  ? "bg-emerald-500 text-white shadow"
+                  : "text-white/70 hover-gold"
+              }`}
+            >
+              Pilotage
+            </button>
+          ) : null}
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-white/50">
@@ -941,12 +978,16 @@ export function PiecesBoard({
         </form>
       </Modal>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Rechercher une pièce, un n° de série, un OF…"
-        className="w-full rounded-lg border border-white/10 bg-black/20 px-4 py-2.5 text-sm outline-none"
-      />
+      {vue === "pilotage" ? (
+        <Pilotage pieces={pieces} poles={poles} users={users} />
+      ) : (
+        <>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher une pièce, un n° de série, un OF…"
+            className="w-full rounded-lg border border-white/10 bg-black/20 px-4 py-2.5 text-sm outline-none"
+          />
 
       {/* Urgences du jour */}
       {urgences.length > 0 ? (
@@ -973,6 +1014,8 @@ export function PiecesBoard({
           {reste.map((p) => renderCard(p))}
         </div>
       ) : null}
+        </>
+      )}
     </section>
   );
 }

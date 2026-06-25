@@ -29,14 +29,17 @@ export default async function HomePage() {
         .order("numero_of"),
       supabase
         .from("users")
-        .select("pole:poles ( libelle )")
+        .select("role, pole:poles ( libelle )")
         .eq("id", user!.id)
         .single(),
     ]);
 
-  const userSecteur =
-    (moiRes.data as { pole: { libelle: string } | null } | null)?.pole
-      ?.libelle ?? "";
+  const moi = moiRes.data as {
+    role: string | null;
+    pole: { libelle: string } | null;
+  } | null;
+  const userSecteur = moi?.pole?.libelle ?? "";
+  const isChef = /chef|atelier|pilot|admin|responsable/i.test(moi?.role ?? "");
 
   return (
     <div className="min-h-screen">
@@ -77,6 +80,7 @@ export default async function HomePage() {
           ofs={(ofsRes.data as Of[]) ?? []}
           userId={user!.id}
           userSecteur={userSecteur}
+          isChef={isChef}
         />
       </main>
     </div>

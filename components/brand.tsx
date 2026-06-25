@@ -1,5 +1,11 @@
-export function Logo({ className }: { className?: string }) {
-  const gold = "#CDB06A";
+export function Logo({
+  className,
+  color = "#CDB06A",
+}: {
+  className?: string;
+  color?: string;
+}) {
+  const gold = color;
   return (
     <span className={`inline-flex ${className ?? "h-10 w-10"}`}>
       {/* Engrenage + cadran horloger, doré (inspiré du logo Tymios) */}
