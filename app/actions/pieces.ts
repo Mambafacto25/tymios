@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail, renderEmail, esc } from "@/lib/email";
 import type { PieceStatut } from "@/lib/types";
 
 type Result = { error?: string };
@@ -46,6 +47,19 @@ export async function createPieceAction(input: {
       numero_of: input.numero_of,
     },
   });
+
+  // Email de création (au propriétaire = créateur).
+  await sendEmail({
+    to: user.email ?? "",
+    subject: `Nouvelle tâche : ${input.titre_operation}`,
+    html: renderEmail("Nouvelle tâche créée", [
+      `La tâche <strong>${esc(input.titre_operation)}</strong> a été créée.`,
+      input.numero_of ? `OF ${esc(input.numero_of)}` : "",
+      input.designation_article ? esc(input.designation_article) : "",
+      "Retrouve-la dans Tymios.",
+    ]),
+  });
+
   return {};
 }
 
@@ -152,7 +166,38 @@ export async function envoiRelaisAction(
     .from("pieces")
     .update({ relais_vers_id: versId })
     .eq("id", pieceId);
-  return e2 ? { error: e2.message } : {};
+  if (e2) return { error: e2.message };
+
+  // Email au destinataire : une pièce lui a été transmise.
+  const [destRes, pieceRes, moiRes] = await Promise.all([
+    supabase.from("users").select("email, prenom").eq("id", versId).single(),
+    supabase
+      .from("pieces")
+      .select("titre_operation, numero_of")
+      .eq("id", pieceId)
+      .single(),
+    supabase.from("users").select("prenom, nom").eq("id", user.id).single(),
+  ]);
+  const dest = destRes.data as { email: string; prenom: string } | null;
+  const piece = pieceRes.data as {
+    titre_operation: string;
+    numero_of: string | null;
+  } | null;
+  const moi = moiRes.data as { prenom: string; nom: string } | null;
+  if (dest?.email) {
+    const expediteur = moi ? `${moi.prenom} ${moi.nom}` : "Un collègue";
+    await sendEmail({
+      to: dest.email,
+      subject: `Relais : « ${piece?.titre_operation ?? "une pièce"} » t'a été transmise`,
+      html: renderEmail("Une pièce t'a été transmise", [
+        `Bonjour ${esc(dest.prenom)},`,
+        `<strong>${esc(expediteur)}</strong> t'a passé le relais de <strong>${esc(piece?.titre_operation ?? "une pièce")}</strong>.`,
+        piece?.numero_of ? `OF ${esc(piece.numero_of)}` : "",
+        "Connecte-toi à Tymios pour la prendre (avec ton code PIN).",
+      ]),
+    });
+  }
+  return {};
 }
 
 export async function annulerEnvoiAction(pieceId: number): Promise<Result> {
