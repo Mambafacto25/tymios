@@ -111,16 +111,22 @@ function Carte({
 }
 
 export function Pilotage({
-  pieces,
+  pieces: allPieces,
   poles,
   users,
   relanceAuto,
+  secteur,
 }: {
   pieces: PieceRow[];
   poles: Pole[];
   users: Personne[];
   relanceAuto: boolean;
+  secteur: string;
 }) {
+  // Limité au secteur sélectionné (Paramètres), sinon tous.
+  const pieces = secteur
+    ? allPieces.filter((p) => p.atelier?.pole?.libelle === secteur)
+    : allPieces;
   const today = startOfToday();
   const actif = (p: PieceRow) => p.statut_courant !== "terminee";
   const ech = (p: PieceRow) => (p.echeance ? new Date(p.echeance).getTime() : 0);
@@ -184,6 +190,14 @@ export function Pilotage({
 
   return (
     <div className="space-y-5">
+      <div className="text-sm text-white/50">
+        Périmètre :{" "}
+        <span className="font-medium text-white/80">
+          {secteur || "Tous les secteurs"}
+        </span>
+        {secteur ? " (modifiable dans Paramètres → Apparence)" : ""}
+      </div>
+
       {/* RETARDS & ALERTES */}
       <Carte accent="#f87171">
         <div className="mb-4 flex items-center justify-between gap-3">

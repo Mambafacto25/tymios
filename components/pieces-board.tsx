@@ -986,6 +986,7 @@ export function PiecesBoard({
           poles={poles}
           users={users}
           relanceAuto={relanceAuto}
+          secteur={filtreSecteur}
         />
       ) : (
         <>
