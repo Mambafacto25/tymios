@@ -49,6 +49,17 @@ export type PieceRow = {
 /** Personne (établi) pour le choix d'un destinataire de relais. */
 export type Personne = { id: string; prenom: string; nom: string };
 
+/** Rôles disponibles dans l'atelier. */
+export const ROLES = [
+  "Décorateur",
+  "Horloger",
+  "Technicien",
+  "Chef Atelier",
+  "Contrôleur",
+  "Logisticien",
+  "Programmeur",
+] as const;
+
 /** Ordre de fabrication importé (référentiel, alimenté par CSV). */
 export type Of = {
   id: number;

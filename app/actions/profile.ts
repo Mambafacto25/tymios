@@ -4,22 +4,42 @@ import { createClient } from "@/lib/supabase/server";
 
 type Result = { error?: string };
 
-export async function updateProfileAction(
-  prenom: string,
-  nom: string,
-): Promise<Result> {
+export async function updateProfileAction(input: {
+  prenom: string;
+  nom: string;
+  role: string | null;
+  poleId: number | null;
+}): Promise<Result> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Non authentifié" };
-  if (!prenom.trim() || !nom.trim()) {
+  if (!input.prenom.trim() || !input.nom.trim()) {
     return { error: "Le nom et le prénom sont obligatoires." };
   }
   const { error } = await supabase
     .from("users")
-    .update({ prenom: prenom.trim(), nom: nom.trim() })
+    .update({
+      prenom: input.prenom.trim(),
+      nom: input.nom.trim(),
+      role: input.role,
+      pole_id: input.poleId,
+    })
     .eq("id", user.id);
+  return error ? { error: error.message } : {};
+}
+
+/** Désactive / réactive un compte (réservé au chef d'atelier, via RPC). */
+export async function setUserActifAction(
+  userId: string,
+  actif: boolean,
+): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_user_actif", {
+    p_user: userId,
+    p_actif: actif,
+  });
   return error ? { error: error.message } : {};
 }
 

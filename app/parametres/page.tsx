@@ -4,6 +4,7 @@ import { Brand } from "@/components/brand";
 import { IconGear } from "@/components/icons";
 import { ProfileForm, PinForm } from "@/components/settings-account";
 import { AppearanceSettings } from "@/components/appearance-settings";
+import { EquipeToggle } from "@/components/equipe-toggle";
 
 type Profil = {
   prenom: string;
@@ -11,6 +12,7 @@ type Profil = {
   email: string;
   role: string | null;
   pin_hash: string | null;
+  pole_id: number | null;
   pole: { libelle: string } | null;
 };
 
@@ -20,6 +22,7 @@ type Membre = {
   nom: string;
   role: string | null;
   actif: boolean;
+  pole_id: number | null;
   pole: { libelle: string; couleur: string | null } | null;
 };
 
@@ -73,12 +76,16 @@ export default async function ParametresPage() {
     await Promise.all([
       supabase
         .from("users")
-        .select("prenom, nom, email, role, pin_hash, pole:poles ( libelle )")
+        .select(
+          "prenom, nom, email, role, pin_hash, pole_id, pole:poles ( libelle )",
+        )
         .eq("id", user!.id)
         .single(),
       supabase
         .from("users")
-        .select("id, prenom, nom, role, actif, pole:poles ( libelle, couleur )")
+        .select(
+          "id, prenom, nom, role, actif, pole_id, pole:poles ( libelle, couleur )",
+        )
         .order("nom"),
       supabase.from("poles").select("id, libelle, couleur, icone").order("libelle"),
       supabase.from("pieces").select("*", { count: "exact", head: true }),
@@ -86,10 +93,16 @@ export default async function ParametresPage() {
     ]);
 
   const profil = profilRes.data as unknown as Profil | null;
-  const equipe = (equipeRes.data as unknown as Membre[] | null) ?? [];
+  const equipeAll = (equipeRes.data as unknown as Membre[] | null) ?? [];
   const secteurs = (secteursRes.data as Secteur[] | null) ?? [];
   const piecesCount = piecesCountRes.count ?? 0;
   const ofsCount = ofsCountRes.count ?? 0;
+
+  // Équipe limitée au secteur du profil (sinon tout).
+  const equipe = profil?.pole_id
+    ? equipeAll.filter((m) => m.pole_id === profil.pole_id)
+    : equipeAll;
+  const isChef = /chef|atelier|responsable|admin/i.test(profil?.role ?? "");
 
   return (
     <div className="min-h-screen">
@@ -126,6 +139,9 @@ export default async function ParametresPage() {
           <ProfileForm
             prenom={profil?.prenom ?? ""}
             nom={profil?.nom ?? ""}
+            role={profil?.role ?? null}
+            poleId={profil?.pole_id ?? null}
+            poles={secteurs}
           />
         </Section>
 
@@ -160,6 +176,9 @@ export default async function ParametresPage() {
                   <th className="px-4 py-3 font-medium">Rôle</th>
                   <th className="px-4 py-3 font-medium">Secteur</th>
                   <th className="px-4 py-3 font-medium">Actif</th>
+                  {isChef ? (
+                    <th className="px-4 py-3 font-medium">Action</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -195,6 +214,19 @@ export default async function ParametresPage() {
                         </span>
                       )}
                     </td>
+                    {isChef ? (
+                      <td className="px-4 py-3">
+                        {m.id === user!.id ? (
+                          <span className="text-xs text-white/30">—</span>
+                        ) : (
+                          <EquipeToggle
+                            userId={m.id}
+                            actif={m.actif}
+                            nom={`${m.prenom} ${m.nom}`}
+                          />
+                        )}
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

@@ -129,8 +129,8 @@ export function PiecesBoard({
   // Secteur affiché par défaut (préférence utilisateur).
   const { prefs } = usePreferences();
   useEffect(() => {
-    setFiltreSecteur(prefs.secteurDefaut);
-  }, [prefs.secteurDefaut]);
+    setFiltreSecteur(prefs.secteurDefaut || userSecteur);
+  }, [prefs.secteurDefaut, userSecteur]);
 
   // Champs du formulaire de création
   const [titre, setTitre] = useState("");
@@ -666,18 +666,16 @@ export function PiecesBoard({
           >
             Archive
           </button>
-          {isChef ? (
-            <button
-              onClick={() => setVue("pilotage")}
-              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                vue === "pilotage"
-                  ? "bg-emerald-500 text-white shadow"
-                  : "text-white/70 hover-gold"
-              }`}
-            >
-              Pilotage
-            </button>
-          ) : null}
+          <button
+            onClick={() => setVue("pilotage")}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+              vue === "pilotage"
+                ? "bg-emerald-500 text-white shadow"
+                : "text-white/70 hover-gold"
+            }`}
+          >
+            Pilotage
+          </button>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-white/50">
