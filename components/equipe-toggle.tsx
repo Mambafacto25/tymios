@@ -31,7 +31,7 @@ export function EquipeToggle({
   async function supprimer() {
     if (
       !window.confirm(
-        `Supprimer DÉFINITIVEMENT le compte de ${nom} ?\n\nCette action est irréversible. Si le compte a un historique, elle sera refusée (désactive-le à la place).`,
+        `Supprimer DÉFINITIVEMENT le compte de ${nom} ?\n\nIrréversible : la fiche, l'accès, les pointages et les événements de ce compte seront effacés, et ses pièces détachées. Assure-toi d'avoir réattribué/géré ses pièces en amont.`,
       )
     )
       return;
