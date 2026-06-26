@@ -47,6 +47,7 @@ type Props = {
   userId: string;
   userSecteur: string;
   isChef: boolean;
+  relanceAuto: boolean;
 };
 
 function formatEcheance(date: string | null): string {
@@ -98,6 +99,7 @@ export function PiecesBoard({
   userId,
   userSecteur,
   isChef,
+  relanceAuto,
 }: Props) {
   const supabase = createClient();
   const router = useRouter();
@@ -979,7 +981,12 @@ export function PiecesBoard({
       </Modal>
 
       {vue === "pilotage" ? (
-        <Pilotage pieces={pieces} poles={poles} users={users} />
+        <Pilotage
+          pieces={pieces}
+          poles={poles}
+          users={users}
+          relanceAuto={relanceAuto}
+        />
       ) : (
         <>
           <input

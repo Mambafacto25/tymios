@@ -14,8 +14,15 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [piecesRes, polesRes, ateliersRes, usersRes, ofsRes, moiRes] =
-    await Promise.all([
+  const [
+    piecesRes,
+    polesRes,
+    ateliersRes,
+    usersRes,
+    ofsRes,
+    moiRes,
+    settingsRes,
+  ] = await Promise.all([
       supabase
         .from("pieces")
         .select(PIECE_SELECT)
@@ -32,7 +39,12 @@ export default async function HomePage() {
         .select("role, pole:poles ( libelle )")
         .eq("id", user!.id)
         .single(),
+      supabase.from("app_settings").select("relance_auto").eq("id", 1).single(),
     ]);
+
+  const relanceAuto =
+    (settingsRes.data as { relance_auto: boolean } | null)?.relance_auto ??
+    false;
 
   const moi = moiRes.data as {
     role: string | null;
@@ -81,6 +93,7 @@ export default async function HomePage() {
           userId={user!.id}
           userSecteur={userSecteur}
           isChef={isChef}
+          relanceAuto={relanceAuto}
         />
       </main>
     </div>

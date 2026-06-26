@@ -36,6 +36,17 @@ export async function GET(request: Request) {
   }
 
   const admin = createClient(url, serviceKey);
+
+  // Respecter l'interrupteur de relance automatique.
+  const { data: settings } = await admin
+    .from("app_settings")
+    .select("relance_auto")
+    .eq("id", 1)
+    .single();
+  if (!settings?.relance_auto) {
+    return Response.json({ ok: true, skipped: "relance auto désactivée" });
+  }
+
   const today = new Date().toISOString().slice(0, 10);
 
   const { data, error } = await admin
