@@ -75,6 +75,39 @@ body {
   background-attachment: fixed;
 }
 
+/* Fond — variantes choisies dans les Paramètres */
+html[data-bg="clair"] body {
+  background-color: #243450; /* 2 tons plus clair */
+}
+html[data-bg="blanc"] body {
+  background-color: #ffffff;
+  background-image: none;
+  color: #0f172a;
+}
+/* Mode blanc : remappe les utilitaires sombres vers du clair lisible */
+html[data-bg="blanc"] .text-white {
+  color: #0f172a !important;
+}
+html[data-bg="blanc"] [class*="text-white/"] {
+  color: #475569 !important;
+}
+html[data-bg="blanc"] [class*="border-white/"] {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+html[data-bg="blanc"] [class*="bg-white/"] {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+html[data-bg="blanc"] [class*="bg-black/"] {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+/* En-tête, modales et champs : surfaces claires en mode blanc */
+html[data-bg="blanc"] [class*="bg-[#0e1422]"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+html[data-bg="blanc"] [class*="bg-[#16204a]"] {
+  background-color: #ffffff !important;
+}
+
 /* Survol doré translucide (onglets / boutons secondaires) */
 .hover-gold {
   transition:

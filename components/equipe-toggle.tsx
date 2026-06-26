@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { setUserActifAction } from "@/app/actions/profile";
+import { setUserActifAction, deleteUserAction } from "@/app/actions/profile";
 
 export function EquipeToggle({
   userId,
@@ -28,18 +28,40 @@ export function EquipeToggle({
     router.refresh();
   }
 
+  async function supprimer() {
+    if (
+      !window.confirm(
+        `Supprimer DÉFINITIVEMENT le compte de ${nom} ?\n\nCette action est irréversible. Si le compte a un historique, elle sera refusée (désactive-le à la place).`,
+      )
+    )
+      return;
+    setBusy(true);
+    setErr(null);
+    const { error } = await deleteUserAction(userId);
+    setBusy(false);
+    if (error) return setErr(error);
+    router.refresh();
+  }
+
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex flex-wrap items-center gap-2">
       <button
         onClick={toggle}
         disabled={busy}
         className={`rounded-md border px-2.5 py-1 text-xs transition disabled:opacity-50 ${
           actif
-            ? "border-red-500/40 text-red-300 hover:bg-red-500/10"
+            ? "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
             : "border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10"
         }`}
       >
         {busy ? "…" : actif ? "Désactiver" : "Réactiver"}
+      </button>
+      <button
+        onClick={supprimer}
+        disabled={busy}
+        className="rounded-md border border-red-500/50 px-2.5 py-1 text-xs text-red-300 transition hover:bg-red-500/15 disabled:opacity-50"
+      >
+        Supprimer
       </button>
       {err ? <span className="text-xs text-red-300">{err}</span> : null}
     </span>

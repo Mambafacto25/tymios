@@ -20,6 +20,12 @@ const FONTS = [
   { label: "Arrondie", value: "rounded" },
 ];
 
+const FONDS = [
+  { label: "Sombre", value: "sombre", swatch: "#0e1422" },
+  { label: "Clair", value: "clair", swatch: "#243450" },
+  { label: "Blanc", value: "blanc", swatch: "#ffffff" },
+];
+
 export function AppearanceSettings({
   secteurs,
 }: {
@@ -29,6 +35,32 @@ export function AppearanceSettings({
 
   return (
     <div className="space-y-7">
+      <div>
+        <div className="mb-2 text-sm text-white/70">Fond</div>
+        <div className="flex flex-wrap gap-2">
+          {FONDS.map((f) => {
+            const active = (prefs.fond || "sombre") === f.value;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setPrefs({ fond: f.value })}
+                className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition ${
+                  active
+                    ? "border-[#CFB53B] bg-[#CFB53B]/15"
+                    : "border-white/15 hover-gold"
+                }`}
+              >
+                <span
+                  className="inline-block h-3.5 w-3.5 rounded-full border border-white/20"
+                  style={{ backgroundColor: f.swatch }}
+                />
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div>
         <div className="mb-2 text-sm text-white/70">Couleur du texte</div>
         <div className="flex flex-wrap gap-2">

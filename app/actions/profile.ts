@@ -43,6 +43,13 @@ export async function setUserActifAction(
   return error ? { error: error.message } : {};
 }
 
+/** Suppression définitive d'un compte (réservé au chef, via RPC). */
+export async function deleteUserAction(userId: string): Promise<Result> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_user", { p_user: userId });
+  return error ? { error: error.message } : {};
+}
+
 /** Sauvegarde les préférences d'affichage sur le compte. */
 export async function savePrefsAction(
   prefs: Record<string, unknown>,
