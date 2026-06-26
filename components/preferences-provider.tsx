@@ -16,6 +16,7 @@ export type Prefs = {
   luminosite: number; // 0.6 – 1.4 (clarté du texte)
   font: string; // sans | serif | mono | rounded
   secteurDefaut: string; // "" = tous
+  fond: string; // sombre | clair | blanc
 };
 
 const DEFAULT: Prefs = {
@@ -24,6 +25,7 @@ const DEFAULT: Prefs = {
   luminosite: 1,
   font: "sans",
   secteurDefaut: "",
+  fond: "sombre",
 };
 const STORAGE_KEY = "relais-prefs";
 
@@ -92,6 +94,7 @@ export function PreferencesProvider({
       computeTextColor(prefs.textColor, prefs.luminosite, prefs.intensite),
     );
     root.dataset.font = prefs.font || "sans";
+    root.dataset.bg = prefs.fond || "sombre";
   }, [prefs]);
 
   const prefsRef = useRef(prefs);
