@@ -14,8 +14,15 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [piecesRes, polesRes, ateliersRes, usersRes, ofsRes] =
-    await Promise.all([
+  const [
+    piecesRes,
+    polesRes,
+    ateliersRes,
+    usersRes,
+    ofsRes,
+    moiRes,
+    settingsRes,
+  ] = await Promise.all([
       supabase
         .from("pieces")
         .select(PIECE_SELECT)
@@ -27,11 +34,28 @@ export default async function HomePage() {
         .from("ofs")
         .select("id, numero_of, designation_article, numero_serie, echeance")
         .order("numero_of"),
+      supabase
+        .from("users")
+        .select("role, pole:poles ( libelle )")
+        .eq("id", user!.id)
+        .single(),
+      supabase.from("app_settings").select("relance_auto").eq("id", 1).single(),
     ]);
+
+  const relanceAuto =
+    (settingsRes.data as { relance_auto: boolean } | null)?.relance_auto ??
+    false;
+
+  const moi = moiRes.data as {
+    role: string | null;
+    pole: { libelle: string } | null;
+  } | null;
+  const userSecteur = moi?.pole?.libelle ?? "";
+  const isChef = /chef|atelier|pilot|admin|responsable/i.test(moi?.role ?? "");
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#191970]/85 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0e1422]/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Brand subtitle="Atelier horloger" />
           <div className="flex items-center gap-4">
@@ -67,6 +91,9 @@ export default async function HomePage() {
           users={(usersRes.data as Personne[]) ?? []}
           ofs={(ofsRes.data as Of[]) ?? []}
           userId={user!.id}
+          userSecteur={userSecteur}
+          isChef={isChef}
+          relanceAuto={relanceAuto}
         />
       </main>
     </div>

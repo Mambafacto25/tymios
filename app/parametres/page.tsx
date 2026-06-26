@@ -93,7 +93,7 @@ export default async function ParametresPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#191970]/85 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0e1422]/85 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <span
@@ -141,7 +141,10 @@ export default async function ParametresPage() {
           description="Personnalise l’affichage (enregistré sur cet appareil)."
         >
           <AppearanceSettings
-            secteurs={secteurs.map((s) => ({ libelle: s.libelle }))}
+            secteurs={secteurs.map((s) => ({
+              libelle: s.libelle,
+              couleur: s.couleur,
+            }))}
           />
         </Section>
 
@@ -234,22 +237,6 @@ export default async function ParametresPage() {
               <div className="text-sm text-white/50">Personnes</div>
             </div>
           </div>
-        </Section>
-
-        <Section title="À propos">
-          <div className="space-y-1 text-sm text-white/60">
-            <p>
-              <span className="text-white/80">Relais</span> — suivi de pièces,
-              relais entre établis et pointage du temps pour atelier horloger.
-            </p>
-            <p>Version v1 · registre d’événements immuable.</p>
-          </div>
-          <Link
-            href="/showcase"
-            className="mt-4 inline-block hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm"
-          >
-            Voir le showcase (MagicBento) →
-          </Link>
         </Section>
       </main>
     </div>

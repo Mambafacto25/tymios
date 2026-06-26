@@ -15,6 +15,19 @@ export const STATUTS: PieceStatut[] = [
   "terminee",
 ];
 
+/** Niveaux d'urgence (stockés dans pieces.priorite : 0 à 3). */
+export type Urgence = { value: number; label: string; color: string };
+export const URGENCES: Urgence[] = [
+  { value: 0, label: "Basse", color: "#34D399" },
+  { value: 1, label: "Moyenne", color: "#FBBF24" },
+  { value: 2, label: "Haute", color: "#FB923C" },
+  { value: 3, label: "Urgence", color: "#F87171" },
+];
+export const SEUIL_URGENCE = 3;
+export function urgenceOf(priorite: number): Urgence {
+  return URGENCES[Math.max(0, Math.min(URGENCES.length - 1, priorite))];
+}
+
 /** Ligne de pièce telle que lue par le tableau de bord (avec jointures). */
 export type PieceRow = {
   id: number;
@@ -58,4 +71,20 @@ export const STATUT_CLASSES: Record<PieceStatut, string> = {
   en_cours: "bg-blue-500/20 text-blue-300",
   bloquee: "bg-red-500/20 text-red-300",
   terminee: "bg-emerald-500/20 text-emerald-300",
+};
+
+/** Couleur (hex) par statut — pour le sous-cadran chronographe. */
+export const STATUT_HEX: Record<PieceStatut, string> = {
+  a_faire: "#9fb0c8",
+  en_cours: "#60a5fa",
+  bloquee: "#f87171",
+  terminee: "#34d399",
+};
+
+/** Avancement (0..1) par statut, pour l'arc du sous-cadran. */
+export const STATUT_PROGRESS: Record<PieceStatut, number> = {
+  a_faire: 0.1,
+  en_cours: 0.55,
+  bloquee: 0.55,
+  terminee: 1,
 };

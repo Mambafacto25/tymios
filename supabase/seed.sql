@@ -1,9 +1,10 @@
--- Référentiel fixe des pôles (secteurs) au départ — éditable plus tard.
+-- Référentiel des secteurs (pôles). Éditable.
 insert into poles (libelle, couleur, icone) values
-  ('Méthodes',       '#6366f1', 'ruler'),
-  ('Production',     '#10b981', 'cog'),
-  ('Qualité',        '#f59e0b', 'shield-check'),
-  ('Appro',          '#3b82f6', 'truck'),
-  ('Service',        '#ec4899', 'wrench'),
-  ('Sous-traitance', '#8b5cf6', 'building')
+  ('Méthodes',       '#74D6E3', 'ruler'),
+  ('Production',     '#59BA69', 'cog'),
+  ('Qualité',        '#FEFF00', 'shield-check'),
+  ('Logistique',     '#FFB700', 'truck'),
+  ('Sous-traitance', '#DA72FC', 'building'),
+  ('Décoration',     '#FF595A', 'palette'),
+  ('Horlogerie',     '#F700AE', 'watch')
 on conflict (libelle) do nothing;

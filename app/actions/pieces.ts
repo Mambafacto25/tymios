@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail, renderEmail, esc, appUrl, detailLignes } from "@/lib/email";
 import type { PieceStatut } from "@/lib/types";
 
 type Result = { error?: string };
@@ -23,14 +24,17 @@ export async function createPieceAction(input: {
   atelier_id: number;
   priorite: number;
   echeance: string | null;
+  proprietaireId?: string | null;
 }): Promise<Result> {
   const { supabase, user } = await authed();
+  const ownerId = input.proprietaireId || user.id;
+  const { proprietaireId: _ignore, ...champs } = input;
   const { data: created, error } = await supabase
     .from("pieces")
     .insert({
-      ...input,
+      ...champs,
       statut_courant: "a_faire",
-      proprietaire_courant_id: user.id,
+      proprietaire_courant_id: ownerId,
     })
     .select("id")
     .single();
@@ -44,8 +48,53 @@ export async function createPieceAction(input: {
       titre_operation: input.titre_operation,
       numero_serie: input.numero_serie,
       numero_of: input.numero_of,
+      assigne_a: ownerId,
     },
   });
+
+  // Email : au destinataire de la tâche.
+  const cta = appUrl() ? { label: "Ouvrir Tymios", url: appUrl() } : undefined;
+  const details = detailLignes({
+    titre: input.titre_operation,
+    designation: input.designation_article,
+    numeroSerie: input.numero_serie,
+    numeroOf: input.numero_of,
+  });
+  if (ownerId === user.id) {
+    await sendEmail({
+      to: user.email ?? "",
+      subject: `Nouvelle tâche : ${input.titre_operation}`,
+      html: renderEmail(
+        "Nouvelle tâche créée",
+        ["Une nouvelle tâche a été créée :", ...details],
+        cta,
+      ),
+    });
+  } else {
+    const [destRes, moiRes] = await Promise.all([
+      supabase.from("users").select("email, prenom").eq("id", ownerId).single(),
+      supabase.from("users").select("prenom, nom").eq("id", user.id).single(),
+    ]);
+    const dest = destRes.data as { email: string; prenom: string } | null;
+    const moi = moiRes.data as { prenom: string; nom: string } | null;
+    if (dest?.email) {
+      const par = moi ? `${moi.prenom} ${moi.nom}` : "Un collègue";
+      await sendEmail({
+        to: dest.email,
+        subject: `Tâche assignée : ${input.titre_operation}`,
+        html: renderEmail(
+          "Une tâche t’a été assignée",
+          [
+            `Bonjour ${esc(dest.prenom)},`,
+            `<strong>${esc(par)}</strong> t’a assigné une tâche :`,
+            ...details,
+          ],
+          cta,
+        ),
+      });
+    }
+  }
+
   return {};
 }
 
@@ -152,7 +201,49 @@ export async function envoiRelaisAction(
     .from("pieces")
     .update({ relais_vers_id: versId })
     .eq("id", pieceId);
-  return e2 ? { error: e2.message } : {};
+  if (e2) return { error: e2.message };
+
+  // Email au destinataire : une pièce lui a été transmise.
+  const [destRes, pieceRes, moiRes] = await Promise.all([
+    supabase.from("users").select("email, prenom").eq("id", versId).single(),
+    supabase
+      .from("pieces")
+      .select("titre_operation, numero_of, numero_serie, designation_article")
+      .eq("id", pieceId)
+      .single(),
+    supabase.from("users").select("prenom, nom").eq("id", user.id).single(),
+  ]);
+  const dest = destRes.data as { email: string; prenom: string } | null;
+  const piece = pieceRes.data as {
+    titre_operation: string;
+    numero_of: string | null;
+    numero_serie: string | null;
+    designation_article: string | null;
+  } | null;
+  const moi = moiRes.data as { prenom: string; nom: string } | null;
+  if (dest?.email) {
+    const expediteur = moi ? `${moi.prenom} ${moi.nom}` : "Un collègue";
+    await sendEmail({
+      to: dest.email,
+      subject: `Relais : « ${piece?.titre_operation ?? "une pièce"} » t'a été transmise`,
+      html: renderEmail(
+        "Une pièce t’a été transmise",
+        [
+          `Bonjour ${esc(dest.prenom)},`,
+          `<strong>${esc(expediteur)}</strong> t’a passé le relais d’une pièce :`,
+          ...detailLignes({
+            titre: piece?.titre_operation,
+            designation: piece?.designation_article,
+            numeroSerie: piece?.numero_serie,
+            numeroOf: piece?.numero_of,
+          }),
+          "Connecte-toi à Tymios pour la prendre (avec ton code PIN).",
+        ],
+        appUrl() ? { label: "Prendre la pièce", url: appUrl() } : undefined,
+      ),
+    });
+  }
+  return {};
 }
 
 export async function annulerEnvoiAction(pieceId: number): Promise<Result> {
@@ -189,6 +280,119 @@ export async function refuserRelaisAction(pieceId: number): Promise<Result> {
     p_piece_id: pieceId,
   });
   return error ? { error: error.message } : {};
+}
+
+/** Active/désactive la relance automatique quotidienne. */
+export async function setRelanceAutoAction(on: boolean): Promise<Result> {
+  const { supabase } = await authed();
+  const { error } = await supabase
+    .from("app_settings")
+    .update({ relance_auto: on })
+    .eq("id", 1);
+  return error ? { error: error.message } : {};
+}
+
+/** Relance par email TOUS les propriétaires de pièces en retard. */
+export async function relancerTousAction(): Promise<{
+  error?: string;
+  count?: number;
+}> {
+  const { supabase } = await authed();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("pieces")
+    .select(
+      `id, titre_operation, numero_of, numero_serie, designation_article, echeance,
+       proprietaire:users!proprietaire_courant_id ( email, prenom )`,
+    )
+    .lt("echeance", today)
+    .neq("statut_courant", "terminee");
+  if (error) return { error: error.message };
+  const cta = appUrl() ? { label: "Ouvrir Tymios", url: appUrl() } : undefined;
+  let count = 0;
+  for (const p of (data as unknown as RetardRow[]) ?? []) {
+    if (!p.proprietaire?.email) continue;
+    const ech = p.echeance
+      ? new Date(p.echeance).toLocaleDateString("fr-FR")
+      : "—";
+    await sendEmail({
+      to: p.proprietaire.email,
+      subject: `⏰ Rappel : « ${p.titre_operation} » en retard`,
+      html: renderEmail(
+        "Pièce en retard",
+        [
+          `Bonjour ${esc(p.proprietaire.prenom)},`,
+          `Cette pièce est <strong>en retard</strong> (échéance du ${esc(ech)}) :`,
+          ...detailLignes({
+            titre: p.titre_operation,
+            designation: p.designation_article,
+            numeroSerie: p.numero_serie,
+            numeroOf: p.numero_of,
+          }),
+        ],
+        cta,
+      ),
+    });
+    count++;
+  }
+  return { count };
+}
+
+type RetardRow = {
+  id: number;
+  titre_operation: string;
+  numero_of: string | null;
+  numero_serie: string | null;
+  designation_article: string | null;
+  echeance: string | null;
+  proprietaire: { email: string; prenom: string } | null;
+};
+
+/** Relance par email le propriétaire d'une pièce (retard). */
+export async function relancerAction(pieceId: number): Promise<Result> {
+  const { supabase } = await authed();
+  const { data } = await supabase
+    .from("pieces")
+    .select(
+      `titre_operation, numero_of, numero_serie, designation_article, echeance,
+       proprietaire:users!proprietaire_courant_id ( email, prenom )`,
+    )
+    .eq("id", pieceId)
+    .single();
+  const p = data as {
+    titre_operation: string;
+    numero_of: string | null;
+    numero_serie: string | null;
+    designation_article: string | null;
+    echeance: string | null;
+    proprietaire: { email: string; prenom: string } | null;
+  } | null;
+  if (!p?.proprietaire?.email) {
+    return { error: "Pas d'email pour le propriétaire de cette pièce." };
+  }
+  const ech = p.echeance
+    ? new Date(p.echeance).toLocaleDateString("fr-FR")
+    : "—";
+  await sendEmail({
+    to: p.proprietaire.email,
+    subject: `⏰ Rappel : « ${p.titre_operation} » en retard`,
+    html: renderEmail(
+      "Pièce en retard",
+      [
+        `Bonjour ${esc(p.proprietaire.prenom)},`,
+        `Cette pièce est <strong>en retard</strong> (échéance du ${esc(ech)}) :`,
+        ...detailLignes({
+          titre: p.titre_operation,
+          designation: p.designation_article,
+          numeroSerie: p.numero_serie,
+          numeroOf: p.numero_of,
+        }),
+        "Merci de la traiter ou de la passer en relais.",
+      ],
+      appUrl() ? { label: "Ouvrir Tymios", url: appUrl() } : undefined,
+    ),
+  });
+  return {};
 }
 
 export async function setMyPinAction(pin: string): Promise<Result> {

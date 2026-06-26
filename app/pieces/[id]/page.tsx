@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PrintButton } from "@/components/print-button";
+import { Logo } from "@/components/brand";
 import { describeEvent, EVENT_TYPE_LABEL, formatDureeSec } from "@/lib/events";
 import { STATUT_LABEL, type PieceStatut } from "@/lib/types";
 
@@ -98,21 +99,39 @@ export default async function FichePage({
       </div>
 
       {/* Document imprimable (fond blanc pour un rendu PDF propre) */}
-      <article className="rounded-xl bg-white p-8 text-neutral-900 shadow-lg print:rounded-none print:shadow-none">
-        <header className="mb-6 border-b border-neutral-200 pb-4">
-          <div className="flex items-start justify-between">
+      <article className="overflow-hidden rounded-xl bg-white text-neutral-900 shadow-lg print:rounded-none print:shadow-none">
+        {/* En-tête doré : logo + nom de l'app */}
+        <header
+          className="flex items-center justify-between px-8 py-5"
+          style={{
+            background: "linear-gradient(135deg, #E6CC7A 0%, #CDB06A 100%)",
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <Logo color="#3a2f12" className="h-11 w-11" />
             <div>
-              <h1 className="text-xl font-bold">Fiche de traçabilité</h1>
-              <p className="text-sm text-neutral-500">Relais — atelier horloger</p>
-            </div>
-            <div className="text-right text-sm text-neutral-500">
-              <div>N° de série</div>
-              <div className="text-base font-semibold text-neutral-900">
-                {piece.numero_serie ?? "—"}
+              <div
+                className="font-display text-2xl font-bold leading-none"
+                style={{ color: "#2a2208" }}
+              >
+                Tymios
+              </div>
+              <div className="text-sm" style={{ color: "#4a3d14" }}>
+                Fiche de traçabilité
               </div>
             </div>
           </div>
+          <div className="text-right" style={{ color: "#3a2f12" }}>
+            <div className="text-xs uppercase tracking-wide opacity-70">
+              N° de série
+            </div>
+            <div className="text-lg font-semibold">
+              {piece.numero_serie ?? "—"}
+            </div>
+          </div>
         </header>
+
+        <div className="p-8">
 
         <section className="mb-6 grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
           <Info label="Opération" value={piece.titre_operation} />
@@ -178,10 +197,11 @@ export default async function FichePage({
           </tbody>
         </table>
 
-        <footer className="mt-6 border-t border-neutral-200 pt-3 text-xs text-neutral-400">
-          Registre en insertion seule — historique non modifiable. Édité le{" "}
-          {new Date().toLocaleString("fr-FR")}.
-        </footer>
+          <footer className="mt-6 border-t border-neutral-200 pt-3 text-xs text-neutral-400">
+            Registre en insertion seule — historique non modifiable. Édité le{" "}
+            {new Date().toLocaleString("fr-FR")}.
+          </footer>
+        </div>
       </article>
     </main>
   );
