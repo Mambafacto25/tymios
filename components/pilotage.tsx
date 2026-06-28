@@ -51,6 +51,20 @@ function Avatar({ u }: { u: Personne }) {
   );
 }
 
+const EUR = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+function fmtEur(n: number): string {
+  return EUR.format(Math.round(n));
+}
+function fmtHeures(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  return h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
+}
+
 type Bucket = { label: string; sub: string; from: number; to: number };
 
 function buildBuckets(horizon: number, today: number): Bucket[] {
@@ -168,6 +182,54 @@ export function Pilotage({
     n: pieces.filter((p) => p.statut_courant === s).length,
   }));
 
+  // ---- Coûts ----
+  const tempsSec = (p: PieceRow) =>
+    (p.temps ?? []).reduce((s, t) => s + (t.duree_sec ?? 0), 0);
+  const tauxOf = (p: PieceRow) => p.atelier?.pole?.taux_horaire ?? 0;
+  const coutOf = (p: PieceRow) => (tempsSec(p) / 3600) * tauxOf(p);
+
+  const tempsTotalSec = pieces.reduce((s, p) => s + tempsSec(p), 0);
+  const coutTotal = pieces.reduce((s, p) => s + coutOf(p), 0);
+  const avecTaux = pieces.some((p) => tauxOf(p) > 0);
+
+  // Coût par secteur (utile surtout en vue « tous les secteurs »).
+  const parSecteur = poles
+    .map((pole) => {
+      const ps = pieces.filter((p) => p.atelier?.pole?.libelle === pole.libelle);
+      return {
+        libelle: pole.libelle,
+        couleur: pole.couleur,
+        cout: ps.reduce((s, p) => s + coutOf(p), 0),
+        sec: ps.reduce((s, p) => s + tempsSec(p), 0),
+        n: ps.length,
+      };
+    })
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.cout - a.cout);
+
+  // ---- Respect des échéances (sur les pièces terminées datées) ----
+  const dayKey = (t: number) => {
+    const d = new Date(t);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  const livrees = pieces.filter(
+    (p) => p.statut_courant === "terminee" && p.terminee_at && p.echeance,
+  );
+  const aLheure = livrees.filter(
+    (p) => dayKey(new Date(p.terminee_at!).getTime()) <= dayKey(ech(p)),
+  ).length;
+  const tauxRespect = livrees.length
+    ? Math.round((aLheure / livrees.length) * 100)
+    : null;
+  const ecartMoyenJours = livrees.length
+    ? livrees.reduce(
+        (s, p) =>
+          s + (dayKey(new Date(p.terminee_at!).getTime()) - dayKey(ech(p))) / DAY,
+        0,
+      ) / livrees.length
+    : null;
+
   const [auto, setAuto] = useState(relanceAuto);
   const [relances, setRelances] = useState<Record<number, string>>({});
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
@@ -188,15 +250,195 @@ export function Pilotage({
     setBulkMsg(error ? `Erreur : ${error}` : `${count} relance(s) envoyée(s)`);
   }
 
+  function exportCsv() {
+    const sep = ";";
+    const esc = (v: string | number) => {
+      const s = String(v);
+      return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const num = (n: number) => n.toFixed(2).replace(".", ","); // Excel FR
+    const dateFr = (iso: string | null) =>
+      iso ? new Date(iso).toLocaleDateString("fr-FR") : "";
+    const cols = [
+      "Pièce",
+      "OF",
+      "N° série",
+      "Secteur",
+      "Statut",
+      "Échéance",
+      "Terminée le",
+      "Temps (h)",
+      "Taux (€/h)",
+      "Coût (€)",
+      "Retard (j)",
+    ];
+    const rows = [...pieces]
+      .sort((a, b) => coutOf(b) - coutOf(a))
+      .map((p) => {
+        const retard =
+          p.echeance && actif(p) && ech(p) < today
+            ? Math.floor((today - ech(p)) / DAY)
+            : p.terminee_at && p.echeance
+              ? Math.round((dayKey(new Date(p.terminee_at).getTime()) - dayKey(ech(p))) / DAY)
+              : 0;
+        return [
+          p.titre_operation,
+          p.numero_of ?? "",
+          p.numero_serie ?? "",
+          p.atelier?.pole?.libelle ?? "",
+          STATUT_LABEL[p.statut_courant],
+          dateFr(p.echeance),
+          dateFr(p.terminee_at),
+          num(tempsSec(p) / 3600),
+          num(tauxOf(p)),
+          num(coutOf(p)),
+          retard,
+        ];
+      });
+    const totalRow = [
+      "TOTAL",
+      "",
+      "",
+      secteur || "Tous secteurs",
+      "",
+      "",
+      "",
+      num(tempsTotalSec / 3600),
+      "",
+      num(coutTotal),
+      "",
+    ];
+    const csv = [cols, ...rows, totalRow]
+      .map((r) => r.map(esc).join(sep))
+      .join("\r\n");
+    // BOM pour les accents sous Excel.
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `tymios-couts-${secteur || "tous"}-${stamp}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-5">
-      <div className="text-sm text-white/50">
-        Périmètre :{" "}
-        <span className="font-medium text-white/80">
-          {secteur || "Tous les secteurs"}
-        </span>
-        {secteur ? " (modifiable dans Paramètres → Apparence)" : ""}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-sm text-white/50">
+          Périmètre :{" "}
+          <span className="font-medium text-white/80">
+            {secteur || "Tous les secteurs"}
+          </span>
+          {secteur ? " (modifiable dans Paramètres → Apparence)" : ""}
+        </div>
+        <button
+          onClick={exportCsv}
+          className="hover-gold rounded-lg border border-white/15 px-3 py-1.5 text-sm font-medium"
+        >
+          ⬇︎ Export Excel (CSV)
+        </button>
       </div>
+
+      {/* COÛTS & ÉCHÉANCES */}
+      <Carte accent="#CFB53B">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="font-display flex items-center gap-2 text-base font-semibold tracking-tight">
+            💰 Coût de revient & délais
+          </h3>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-[#CFB53B]/30 bg-[#CFB53B]/[0.06] p-4">
+            <div className="text-2xl font-bold text-[#F0D879]">
+              {avecTaux ? fmtEur(coutTotal) : "—"}
+            </div>
+            <div className="text-sm text-white/55">Coût de revient total</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/15 p-4">
+            <div className="text-2xl font-bold">{fmtHeures(tempsTotalSec)}</div>
+            <div className="text-sm text-white/55">Temps pointé total</div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/15 p-4">
+            <div
+              className="text-2xl font-bold"
+              style={{
+                color:
+                  tauxRespect == null
+                    ? "#9fb0c8"
+                    : tauxRespect >= 80
+                      ? "#34d399"
+                      : tauxRespect >= 50
+                        ? "#fbbf24"
+                        : "#f87171",
+              }}
+            >
+              {tauxRespect == null ? "—" : `${tauxRespect} %`}
+            </div>
+            <div className="text-sm text-white/55">
+              Échéances respectées
+              {livrees.length ? (
+                <span className="text-white/35"> ({livrees.length} livrée·s)</span>
+              ) : null}
+            </div>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/15 p-4">
+            <div
+              className="text-2xl font-bold"
+              style={{
+                color:
+                  ecartMoyenJours == null
+                    ? "#9fb0c8"
+                    : ecartMoyenJours <= 0
+                      ? "#34d399"
+                      : "#f87171",
+              }}
+            >
+              {ecartMoyenJours == null
+                ? "—"
+                : ecartMoyenJours <= 0
+                  ? `${Math.abs(Math.round(ecartMoyenJours))} j av.`
+                  : `+${Math.round(ecartMoyenJours)} j`}
+            </div>
+            <div className="text-sm text-white/55">
+              Écart moyen livraison
+              <span className="text-white/35"> (réel vs prévu)</span>
+            </div>
+          </div>
+        </div>
+
+        {!avecTaux ? (
+          <p className="mt-3 text-xs text-amber-300/80">
+            Renseigne un taux horaire par secteur dans Paramètres → Secteurs pour
+            calculer le coût de revient.
+          </p>
+        ) : parSecteur.length > 1 ? (
+          <div className="mt-4 space-y-1.5">
+            {parSecteur.map((s) => {
+              const pct = coutTotal ? (s.cout / coutTotal) * 100 : 0;
+              return (
+                <div key={s.libelle} className="flex items-center gap-3 text-sm">
+                  <span className="w-28 shrink-0 truncate text-white/70">
+                    {s.libelle}
+                  </span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pct}%`,
+                        backgroundColor: s.couleur ?? "#CFB53B",
+                      }}
+                    />
+                  </div>
+                  <span className="w-20 shrink-0 text-right font-medium tabular-nums">
+                    {fmtEur(s.cout)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </Carte>
 
       {/* RETARDS & ALERTES */}
       <Carte accent="#f87171">

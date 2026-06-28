@@ -111,9 +111,13 @@ export async function changeStatutAction(
     payload: { de, vers },
   });
   if (e1) return { error: e1.message };
+  // Date de fin réelle : posée au passage en « terminee », effacée si on en sort.
   const { error: e2 } = await supabase
     .from("pieces")
-    .update({ statut_courant: vers })
+    .update({
+      statut_courant: vers,
+      terminee_at: vers === "terminee" ? new Date().toISOString() : null,
+    })
     .eq("id", pieceId);
   return e2 ? { error: e2.message } : {};
 }
@@ -398,5 +402,19 @@ export async function relancerAction(pieceId: number): Promise<Result> {
 export async function setMyPinAction(pin: string): Promise<Result> {
   const { supabase } = await authed();
   const { error } = await supabase.rpc("set_my_pin", { p_pin: pin });
+  return error ? { error: error.message } : {};
+}
+
+/** Définit le taux horaire (€/h) d'un secteur (réservé au chef d'atelier). */
+export async function setTauxHoraireAction(
+  poleId: number,
+  taux: number,
+): Promise<Result> {
+  const { supabase } = await authed();
+  if (!Number.isFinite(taux) || taux < 0) return { error: "Taux invalide." };
+  const { error } = await supabase.rpc("set_taux_horaire", {
+    p_pole: poleId,
+    p_taux: taux,
+  });
   return error ? { error: error.message } : {};
 }

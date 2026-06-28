@@ -5,6 +5,7 @@ import { IconGear } from "@/components/icons";
 import { ProfileForm, PinForm } from "@/components/settings-account";
 import { AppearanceSettings } from "@/components/appearance-settings";
 import { EquipeToggle } from "@/components/equipe-toggle";
+import { SecteursTaux } from "@/components/secteurs-taux";
 
 type Profil = {
   prenom: string;
@@ -31,6 +32,7 @@ type Secteur = {
   libelle: string;
   couleur: string | null;
   icone: string | null;
+  taux_horaire?: number;
 };
 
 function Section({
@@ -87,7 +89,10 @@ export default async function ParametresPage() {
           "id, prenom, nom, role, actif, pole_id, pole:poles ( libelle, couleur )",
         )
         .order("nom"),
-      supabase.from("poles").select("id, libelle, couleur, icone").order("libelle"),
+      supabase
+        .from("poles")
+        .select("id, libelle, couleur, icone, taux_horaire")
+        .order("libelle"),
       supabase.from("pieces").select("*", { count: "exact", head: true }),
       supabase.from("ofs").select("*", { count: "exact", head: true }),
     ]);
@@ -236,22 +241,13 @@ export default async function ParametresPage() {
 
         <Section
           title="Secteurs"
-          description="Référentiel des secteurs de l’atelier."
+          description={
+            isChef
+              ? "Référentiel des secteurs. Le taux horaire sert au calcul du coût de revient (Pilotage)."
+              : "Référentiel des secteurs de l’atelier et leur taux horaire."
+          }
         >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {secteurs.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/15 px-4 py-3"
-              >
-                <span
-                  className="inline-block h-3 w-3 rounded-full"
-                  style={{ backgroundColor: s.couleur ?? "#6b7280" }}
-                />
-                <span className="font-medium">{s.libelle}</span>
-              </div>
-            ))}
-          </div>
+          <SecteursTaux secteurs={secteurs} isChef={isChef} />
         </Section>
 
         <Section title="Données" description="Vue d’ensemble de ton atelier.">
