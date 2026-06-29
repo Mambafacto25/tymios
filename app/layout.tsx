@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { PreferencesProvider } from "@/components/preferences-provider";
+import { NotifyProvider } from "@/components/notify";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export default async function RootLayout({
     <html lang="fr">
       <body>
         <PreferencesProvider initialPrefs={initialPrefs}>
-          {children}
+          <NotifyProvider>{children}</NotifyProvider>
         </PreferencesProvider>
       </body>
     </html>

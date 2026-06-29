@@ -3,7 +3,12 @@
 export type PieceStatut = "a_faire" | "en_cours" | "bloquee" | "terminee";
 
 /** Référentiel secteur (pôle). */
-export type Pole = { id: number; libelle: string; couleur: string | null };
+export type Pole = {
+  id: number;
+  libelle: string;
+  couleur: string | null;
+  taux_horaire?: number;
+};
 
 /** Atelier (utilisé pour relier une pièce à un secteur). */
 export type Atelier = { id: number; pole_id: number };
@@ -38,12 +43,17 @@ export type PieceRow = {
   priorite: number;
   echeance: string | null;
   statut_courant: PieceStatut;
+  terminee_at: string | null;
+  created_at?: string | null;
   proprietaire_courant_id: string | null;
   relais_vers_id: string | null;
-  atelier: { nom: string; pole: { libelle: string; couleur: string | null } | null } | null;
+  atelier: {
+    nom: string;
+    pole: { libelle: string; couleur: string | null; taux_horaire?: number } | null;
+  } | null;
   proprietaire: { prenom: string; nom: string } | null;
   destinataire: { prenom: string; nom: string } | null;
-  temps: { duree_sec: number; user_id: string }[];
+  temps: { duree_sec: number; user_id: string; created_at?: string | null }[];
 };
 
 /** Personne (établi) pour le choix d'un destinataire de relais. */

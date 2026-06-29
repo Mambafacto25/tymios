@@ -19,8 +19,10 @@ import { OfImport } from "@/components/of-import";
 import { Modal } from "@/components/modal";
 import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
 import { Dial } from "@/components/dial";
+import { Pusher } from "@/components/pusher";
 import { Pilotage } from "@/components/pilotage";
 import { usePreferences } from "@/components/preferences-provider";
+import { useNotify } from "@/components/notify";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
@@ -103,6 +105,7 @@ export function PiecesBoard({
 }: Props) {
   const supabase = createClient();
   const router = useRouter();
+  const { toast, confirm, prompt } = useNotify();
   const [pieces, setPieces] = useState<PieceRow[]>(initialPieces);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -203,7 +206,6 @@ export function PiecesBoard({
       delete next[piece.id];
       return next;
     });
-    setError(null);
     const { error } = await pointerTempsAction(
       piece.id,
       dureeSec,
@@ -211,89 +213,135 @@ export function PiecesBoard({
       new Date(start).toISOString(),
       new Date().toISOString(),
     );
-    if (error) return setError(error);
+    if (error) return toast.error("Pointage refusé", error);
+    toast.success("Temps pointé", `${formatDuree(dureeSec)} sur « ${piece.titre_operation} »`);
     refetch();
   }
 
   async function pointerManuel(piece: PieceRow) {
-    const saisie = window.prompt(
-      `Temps à ajouter sur « ${piece.titre_operation} » (en minutes) :`,
-    );
-    if (!saisie) return;
+    const saisie = await prompt({
+      title: "Saisie manuelle du temps",
+      message: `Temps à ajouter sur « ${piece.titre_operation} ».`,
+      label: "Durée (minutes)",
+      type: "number",
+      inputMode: "numeric",
+      placeholder: "ex. 30",
+      confirmLabel: "Ajouter",
+      emblem: "✎",
+      validate: (v) => {
+        const n = Number(v.replace(",", "."));
+        return Number.isFinite(n) && n > 0 ? null : "Indique un nombre de minutes (> 0).";
+      },
+    });
+    if (saisie === null) return;
     const minutes = Number(saisie.replace(",", "."));
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      return setError("Durée invalide.");
-    }
-    setError(null);
     const { error } = await pointerTempsAction(
       piece.id,
       Math.round(minutes * 60),
       true,
     );
-    if (error) return setError(error);
+    if (error) return toast.error("Pointage refusé", error);
+    toast.success("Temps ajouté", `${formatDuree(Math.round(minutes * 60))} sur « ${piece.titre_operation} »`);
     refetch();
   }
 
   async function corrigerTemps(piece: PieceRow) {
     const ancien = totalSec(piece);
-    const saisie = window.prompt(
-      `Corriger le temps total de « ${piece.titre_operation} » (en minutes) :`,
-      String(Math.round(ancien / 60)),
-    );
+    const saisie = await prompt({
+      title: "Corriger le temps total",
+      message: `Nouveau temps total de « ${piece.titre_operation} ». L'historique reste tracé (écriture corrective).`,
+      label: "Temps total (minutes)",
+      type: "number",
+      inputMode: "numeric",
+      defaultValue: String(Math.round(ancien / 60)),
+      confirmLabel: "Suivant",
+      emblem: "✎",
+      validate: (v) => {
+        const n = Number(v.replace(",", "."));
+        return Number.isFinite(n) && n >= 0 ? null : "Indique un nombre de minutes (≥ 0).";
+      },
+    });
     if (saisie === null) return;
     const minutes = Number(saisie.replace(",", "."));
-    if (!Number.isFinite(minutes) || minutes < 0) {
-      return setError("Total invalide.");
-    }
-    const raison = window.prompt("Motif de la correction :") ?? "";
-    setError(null);
+    const raison =
+      (await prompt({
+        title: "Motif de la correction",
+        message: "Pour la traçabilité du registre.",
+        label: "Motif",
+        placeholder: "ex. oubli d'arrêt du chrono",
+        confirmLabel: "Enregistrer",
+      })) ?? "";
     const { error } = await corrigerTempsAction(
       piece.id,
       ancien,
       Math.round(minutes * 60),
       raison,
     );
-    if (error) return setError(error);
+    if (error) return toast.error("Correction refusée", error);
+    toast.success("Temps corrigé", `Total : ${formatDuree(Math.round(minutes * 60))}`);
     refetch();
   }
 
   async function changeStatut(piece: PieceRow, vers: PieceStatut) {
     if (vers === piece.statut_courant) return;
-    setError(null);
     const { error } = await changeStatutAction(piece.id, piece.statut_courant, vers);
-    if (error) return setError(error);
+    if (error) return toast.error("Changement refusé", error);
+    if (vers === "terminee") {
+      toast.gold("Pièce terminée ✦", piece.titre_operation);
+    } else if (vers === "bloquee") {
+      toast.info("Pièce bloquée", piece.titre_operation);
+    }
     refetch();
   }
 
   async function envoiRelais(piece: PieceRow, versId: string) {
-    setError(null);
     const { error } = await envoiRelaisAction(piece.id, versId);
-    if (error) return setError(error);
+    if (error) return toast.error("Relais impossible", error);
+    const dest = users.find((u) => u.id === versId);
+    toast.gold(
+      "Relais transmis",
+      dest ? `« ${piece.titre_operation} » → ${dest.prenom} ${dest.nom}` : piece.titre_operation,
+    );
     refetch();
   }
 
   async function annulerEnvoi(piece: PieceRow) {
-    setError(null);
     const { error } = await annulerEnvoiAction(piece.id);
-    if (error) return setError(error);
+    if (error) return toast.error("Annulation impossible", error);
+    toast.info("Relais annulé", piece.titre_operation);
     refetch();
   }
 
   async function prendre(piece: PieceRow) {
-    setError(null);
-    const pin = window.prompt(
-      `Entre ton PIN pour prendre « ${piece.titre_operation} » :`,
-    );
-    if (!pin) return;
+    const pin = await prompt({
+      title: "Prendre la pièce",
+      message: `Confirme ton identité pour prendre « ${piece.titre_operation} ».`,
+      label: "Code PIN",
+      type: "password",
+      inputMode: "numeric",
+      placeholder: "••••",
+      confirmLabel: "Prendre",
+      emblem: "🔑",
+      validate: (v) =>
+        /^\d{4,8}$/.test(v) ? null : "Le PIN contient 4 à 8 chiffres.",
+    });
+    if (pin === null) return;
     const { error } = await prendreRelaisAction(piece.id, pin);
-    if (error) return setError(error);
+    if (error) return toast.error("PIN refusé", error);
+    toast.success("Pièce prise ✦", piece.titre_operation);
     refetch();
   }
 
   async function refuser(piece: PieceRow) {
-    setError(null);
+    const ok = await confirm({
+      title: "Refuser ce relais ?",
+      message: `« ${piece.titre_operation} » retournera à son expéditeur.`,
+      confirmLabel: "Refuser",
+    });
+    if (!ok) return;
     const { error } = await refuserRelaisAction(piece.id);
-    if (error) return setError(error);
+    if (error) return toast.error("Action impossible", error);
+    toast.info("Relais refusé", piece.titre_operation);
     refetch();
   }
 
@@ -307,6 +355,7 @@ export function PiecesBoard({
     if (error) return setPinMsg(error);
     setPinValue("");
     setShowPin(false);
+    toast.success("Code PIN enregistré", "Tu peux désormais accepter un relais.");
   }
 
   async function createPiece(e: React.FormEvent) {
@@ -334,6 +383,7 @@ export function PiecesBoard({
       return setError(error);
     }
 
+    const titreCree = titre.trim();
     setTitre("");
     setPoleId("");
     setNumeroSerie("");
@@ -345,6 +395,7 @@ export function PiecesBoard({
     setOfId("");
     setShowForm(false);
     setBusy(false);
+    toast.success("Pièce créée", titreCree);
     refetch();
   }
 
@@ -410,13 +461,13 @@ export function PiecesBoard({
       <div
         key={p.id}
         onClick={() => router.push(`/pieces/${p.id}`)}
-        className="task-card relative cursor-pointer rounded-2xl border bg-white/[0.035] p-5"
+        className="task-card guilloche-soft relative cursor-pointer overflow-hidden rounded-2xl border bg-white/[0.035] p-5"
         style={{
           borderColor: `${urg.color}66`,
           boxShadow: `0 0 0 1px ${urg.color}22, 0 0 16px ${urg.color}33`,
         }}
       >
-        <div className="flex h-full flex-col gap-3">
+        <div className="relative z-10 flex h-full flex-col gap-3">
           {/* En-tête : titre + statut */}
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -480,6 +531,7 @@ export function PiecesBoard({
               <Dial
                 progress={STATUT_PROGRESS[p.statut_courant]}
                 color={STATUT_HEX[p.statut_courant]}
+                live={!!chrono[p.id]}
                 label={
                   chrono[p.id]
                     ? formatChrono(Math.round((now - chrono[p.id]) / 1000))
@@ -487,42 +539,41 @@ export function PiecesBoard({
                 }
               />
               {p.proprietaire_courant_id === userId ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-1.5 py-1 shadow-inner">
                   {chrono[p.id] ? (
-                    <button
-                      onClick={() => arreterChrono(p)}
+                    <Pusher
+                      tone="#f4516c"
+                      ink="#ffffff"
+                      live
                       title="Arrêter le chrono"
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:opacity-90"
+                      onClick={() => arreterChrono(p)}
                     >
-                      <IconStop className="h-3.5 w-3.5" />
-                    </button>
+                      <IconStop className="h-3 w-3" />
+                    </Pusher>
                   ) : (
-                    <button
-                      onClick={() => demarrerChrono(p.id)}
+                    <Pusher
+                      tone="#2dd47f"
                       title="Démarrer le chrono"
-                      style={{ backgroundColor: "#66FF00" }}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+                      onClick={() => demarrerChrono(p.id)}
                     >
-                      <IconPlay className="h-4 w-4" />
-                    </button>
+                      <IconPlay className="h-3.5 w-3.5" />
+                    </Pusher>
                   )}
-                  <button
+                  <Pusher
+                    tone="#5cc8ff"
+                    title="Ajouter du temps (saisie manuelle)"
                     onClick={() => pointerManuel(p)}
-                    title="Saisie manuelle"
-                    style={{ backgroundColor: "#89CFF0" }}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
                   >
-                    <IconPlus className="h-4 w-4" />
-                  </button>
+                    <IconPlus className="h-3.5 w-3.5" />
+                  </Pusher>
                   {totalSec(p) > 0 ? (
-                    <button
-                      onClick={() => corrigerTemps(p)}
+                    <Pusher
+                      tone="#e6c84d"
                       title="Corriger le temps"
-                      style={{ backgroundColor: "#CCCCFF" }}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+                      onClick={() => corrigerTemps(p)}
                     >
-                      <IconPencil className="h-3.5 w-3.5" />
-                    </button>
+                      <IconPencil className="h-3 w-3" />
+                    </Pusher>
                   ) : null}
                 </span>
               ) : null}
@@ -699,12 +750,6 @@ export function PiecesBoard({
           </button>
         </div>
       </div>
-
-      {error ? (
-        <p className="rounded-md bg-red-500/15 px-3 py-2 text-sm text-red-300">
-          {error}
-        </p>
-      ) : null}
 
       {/* Inbox — pièces qu'on m'a envoyées et que je dois prendre */}
       {inbox.length > 0 ? (

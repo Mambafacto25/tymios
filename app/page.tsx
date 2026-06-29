@@ -27,7 +27,10 @@ export default async function HomePage() {
         .from("pieces")
         .select(PIECE_SELECT)
         .order("echeance", { ascending: true, nullsFirst: false }),
-      supabase.from("poles").select("id, libelle, couleur").order("libelle"),
+      supabase
+        .from("poles")
+        .select("id, libelle, couleur, taux_horaire")
+        .order("libelle"),
       supabase.from("ateliers").select("id, pole_id"),
       supabase.from("users").select("id, prenom, nom").eq("actif", true),
       supabase
