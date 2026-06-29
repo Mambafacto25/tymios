@@ -71,7 +71,13 @@ body {
       rgba(255, 255, 255, 0.08),
       transparent 70%
     ),
-    radial-gradient(60rem 30rem at 100% 0, rgba(0, 0, 0, 0.18), transparent 60%);
+    radial-gradient(
+      54rem 24rem at 50% -8rem,
+      rgba(207, 181, 59, 0.07),
+      transparent 70%
+    ),
+    radial-gradient(60rem 30rem at 100% 0, rgba(0, 0, 0, 0.18), transparent 60%),
+    radial-gradient(90rem 60rem at 50% 130%, rgba(0, 0, 0, 0.32), transparent 60%);
   background-attachment: fixed;
 }
 
@@ -253,6 +259,77 @@ html[data-bg="blanc"] [class*="bg-[#16204a]"] {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* ---- Poussoirs de chronographe ---- */
+.pusher {
+  transition:
+    transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+  will-change: transform;
+}
+.pusher:hover {
+  transform: translateY(-1.5px) scale(1.08);
+  filter: brightness(1.07);
+}
+.pusher:active {
+  transform: translateY(1px) scale(0.94);
+  filter: brightness(0.96);
+}
+/* Poussoir « en prise » (chrono actif) : halo pulsé */
+.pusher-live::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--tone, #f4516c);
+  animation: pusher-ring 1.5s ease-out infinite;
+}
+@keyframes pusher-ring {
+  0% { opacity: 0.7; transform: scale(0.85); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+/* Guilloché « doux » pour les cartes (très discret) */
+.guilloche-soft::before {
+  content: "";
+  position: absolute;
+  inset: -15%;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("/guilloche.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* ---- Écran de chargement & marque ---- */
+.gold-shimmer {
+  background: linear-gradient(
+    100deg,
+    #cdb06a 0%,
+    #f6e7a8 25%,
+    #cdb06a 50%,
+    #f6e7a8 75%,
+    #cdb06a 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shimmer 3s linear infinite;
+}
+@keyframes gold-shimmer {
+  to { background-position: -200% center; }
+}
+@keyframes loading-bar {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(420%); }
+}
+.loading-bar {
+  background: linear-gradient(90deg, transparent, #cdb06a, transparent);
+  animation: loading-bar 1.2s ease-in-out infinite;
 }
 
 /* Barre de défilement discrète */

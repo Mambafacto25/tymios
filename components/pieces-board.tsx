@@ -19,6 +19,7 @@ import { OfImport } from "@/components/of-import";
 import { Modal } from "@/components/modal";
 import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
 import { Dial } from "@/components/dial";
+import { Pusher } from "@/components/pusher";
 import { Pilotage } from "@/components/pilotage";
 import { usePreferences } from "@/components/preferences-provider";
 import { useNotify } from "@/components/notify";
@@ -460,13 +461,13 @@ export function PiecesBoard({
       <div
         key={p.id}
         onClick={() => router.push(`/pieces/${p.id}`)}
-        className="task-card relative cursor-pointer rounded-2xl border bg-white/[0.035] p-5"
+        className="task-card guilloche-soft relative cursor-pointer overflow-hidden rounded-2xl border bg-white/[0.035] p-5"
         style={{
           borderColor: `${urg.color}66`,
           boxShadow: `0 0 0 1px ${urg.color}22, 0 0 16px ${urg.color}33`,
         }}
       >
-        <div className="flex h-full flex-col gap-3">
+        <div className="relative z-10 flex h-full flex-col gap-3">
           {/* En-tête : titre + statut */}
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -530,6 +531,7 @@ export function PiecesBoard({
               <Dial
                 progress={STATUT_PROGRESS[p.statut_courant]}
                 color={STATUT_HEX[p.statut_courant]}
+                live={!!chrono[p.id]}
                 label={
                   chrono[p.id]
                     ? formatChrono(Math.round((now - chrono[p.id]) / 1000))
@@ -537,42 +539,41 @@ export function PiecesBoard({
                 }
               />
               {p.proprietaire_courant_id === userId ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-1.5 py-1 shadow-inner">
                   {chrono[p.id] ? (
-                    <button
-                      onClick={() => arreterChrono(p)}
+                    <Pusher
+                      tone="#f4516c"
+                      ink="#ffffff"
+                      live
                       title="Arrêter le chrono"
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-white shadow-sm transition hover:opacity-90"
+                      onClick={() => arreterChrono(p)}
                     >
-                      <IconStop className="h-3.5 w-3.5" />
-                    </button>
+                      <IconStop className="h-3 w-3" />
+                    </Pusher>
                   ) : (
-                    <button
-                      onClick={() => demarrerChrono(p.id)}
+                    <Pusher
+                      tone="#2dd47f"
                       title="Démarrer le chrono"
-                      style={{ backgroundColor: "#66FF00" }}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+                      onClick={() => demarrerChrono(p.id)}
                     >
-                      <IconPlay className="h-4 w-4" />
-                    </button>
+                      <IconPlay className="h-3.5 w-3.5" />
+                    </Pusher>
                   )}
-                  <button
+                  <Pusher
+                    tone="#5cc8ff"
+                    title="Ajouter du temps (saisie manuelle)"
                     onClick={() => pointerManuel(p)}
-                    title="Saisie manuelle"
-                    style={{ backgroundColor: "#89CFF0" }}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
                   >
-                    <IconPlus className="h-4 w-4" />
-                  </button>
+                    <IconPlus className="h-3.5 w-3.5" />
+                  </Pusher>
                   {totalSec(p) > 0 ? (
-                    <button
-                      onClick={() => corrigerTemps(p)}
+                    <Pusher
+                      tone="#e6c84d"
                       title="Corriger le temps"
-                      style={{ backgroundColor: "#CCCCFF" }}
-                      className="flex h-7 w-7 items-center justify-center rounded-full text-black shadow-sm transition hover:opacity-90"
+                      onClick={() => corrigerTemps(p)}
                     >
-                      <IconPencil className="h-3.5 w-3.5" />
-                    </button>
+                      <IconPencil className="h-3 w-3" />
+                    </Pusher>
                   ) : null}
                 </span>
               ) : null}
