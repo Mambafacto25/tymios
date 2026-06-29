@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setUserActifAction, deleteUserAction } from "@/app/actions/profile";
+import { useNotify } from "@/components/notify";
 
 export function EquipeToggle({
   userId,
@@ -14,32 +15,40 @@ export function EquipeToggle({
   nom: string;
 }) {
   const router = useRouter();
+  const { confirm, toast } = useNotify();
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
   async function toggle() {
-    const verbe = actif ? "désactiver" : "réactiver";
-    if (!window.confirm(`Confirmer : ${verbe} le compte de ${nom} ?`)) return;
+    const verbe = actif ? "Désactiver" : "Réactiver";
+    const ok = await confirm({
+      title: `${verbe} ce compte ?`,
+      message: `${verbe.toLowerCase()} le compte de ${nom}.`,
+      confirmLabel: verbe,
+      emblem: actif ? "❚❚" : "▶",
+    });
+    if (!ok) return;
     setBusy(true);
-    setErr(null);
     const { error } = await setUserActifAction(userId, !actif);
     setBusy(false);
-    if (error) return setErr(error);
+    if (error) return toast.error("Action impossible", error);
+    toast.success(actif ? "Compte désactivé" : "Compte réactivé", nom);
     router.refresh();
   }
 
   async function supprimer() {
-    if (
-      !window.confirm(
-        `Supprimer DÉFINITIVEMENT le compte de ${nom} ?\n\nIrréversible : la fiche, l'accès, les pointages et les événements de ce compte seront effacés, et ses pièces détachées. Assure-toi d'avoir réattribué/géré ses pièces en amont.`,
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: "Supprimer définitivement ?",
+      message: `Le compte de ${nom} sera effacé : fiche, accès, pointages et événements. Ses pièces seront détachées. Cette action est irréversible — assure-toi d'avoir réattribué ses pièces.`,
+      confirmLabel: "Supprimer",
+      cancelLabel: "Conserver",
+      danger: true,
+    });
+    if (!ok) return;
     setBusy(true);
-    setErr(null);
     const { error } = await deleteUserAction(userId);
     setBusy(false);
-    if (error) return setErr(error);
+    if (error) return toast.error("Suppression impossible", error);
+    toast.success("Compte supprimé", `${nom} a été retiré de l'atelier.`);
     router.refresh();
   }
 
@@ -63,7 +72,6 @@ export function EquipeToggle({
       >
         Supprimer
       </button>
-      {err ? <span className="text-xs text-red-300">{err}</span> : null}
     </span>
   );
 }

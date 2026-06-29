@@ -6,6 +6,7 @@ import {
   relancerTousAction,
   setRelanceAutoAction,
 } from "@/app/actions/pieces";
+import { useNotify } from "@/components/notify";
 import {
   STATUTS,
   STATUT_LABEL,
@@ -137,6 +138,7 @@ export function Pilotage({
   relanceAuto: boolean;
   secteur: string;
 }) {
+  const { toast, confirm } = useNotify();
   // Limité au secteur sélectionné (Paramètres), sinon tous.
   const pieces = secteur
     ? allPieces.filter((p) => p.atelier?.pole?.libelle === secteur)
@@ -237,17 +239,40 @@ export function Pilotage({
   async function toggleAuto() {
     const next = !auto;
     setAuto(next);
-    await setRelanceAutoAction(next);
+    const { error } = await setRelanceAutoAction(next);
+    if (error) {
+      setAuto(!next);
+      return toast.error("Réglage impossible", error);
+    }
+    toast.info(
+      next ? "Relance auto activée" : "Relance auto désactivée",
+      next ? "Un email partira chaque matin pour les pièces en retard." : undefined,
+    );
   }
   async function relancer(id: number) {
     setRelances((r) => ({ ...r, [id]: "…" }));
     const { error } = await relancerAction(id);
     setRelances((r) => ({ ...r, [id]: error ? "Échec" : "Relancé ✓" }));
+    if (error) toast.error("Relance impossible", error);
+    else toast.success("Relance envoyée");
   }
   async function relancerTous() {
+    const ok = await confirm({
+      title: "Relancer tout le monde ?",
+      message: "Un email de rappel partira à chaque propriétaire d'une pièce en retard.",
+      confirmLabel: "Envoyer les relances",
+      emblem: "✉",
+    });
+    if (!ok) return;
     setBulkMsg("Envoi…");
     const { error, count } = await relancerTousAction();
-    setBulkMsg(error ? `Erreur : ${error}` : `${count} relance(s) envoyée(s)`);
+    setBulkMsg(null);
+    if (error) toast.error("Envoi impossible", error);
+    else
+      toast.success(
+        "Relances envoyées",
+        `${count} rappel${count && count > 1 ? "s" : ""} parti${count && count > 1 ? "s" : ""}.`,
+      );
   }
 
   function exportCsv() {
@@ -320,6 +345,7 @@ export function Pilotage({
     a.download = `tymios-couts-${secteur || "tous"}-${stamp}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+    toast.success("Export généré", `${pieces.length} pièce(s) — fichier CSV téléchargé.`);
   }
 
   return (

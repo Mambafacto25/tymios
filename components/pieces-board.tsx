@@ -21,6 +21,7 @@ import { IconPlay, IconStop, IconPlus, IconPencil } from "@/components/icons";
 import { Dial } from "@/components/dial";
 import { Pilotage } from "@/components/pilotage";
 import { usePreferences } from "@/components/preferences-provider";
+import { useNotify } from "@/components/notify";
 import {
   STATUT_CLASSES,
   STATUT_LABEL,
@@ -103,6 +104,7 @@ export function PiecesBoard({
 }: Props) {
   const supabase = createClient();
   const router = useRouter();
+  const { toast, confirm, prompt } = useNotify();
   const [pieces, setPieces] = useState<PieceRow[]>(initialPieces);
   const [showForm, setShowForm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -203,7 +205,6 @@ export function PiecesBoard({
       delete next[piece.id];
       return next;
     });
-    setError(null);
     const { error } = await pointerTempsAction(
       piece.id,
       dureeSec,
@@ -211,89 +212,135 @@ export function PiecesBoard({
       new Date(start).toISOString(),
       new Date().toISOString(),
     );
-    if (error) return setError(error);
+    if (error) return toast.error("Pointage refusé", error);
+    toast.success("Temps pointé", `${formatDuree(dureeSec)} sur « ${piece.titre_operation} »`);
     refetch();
   }
 
   async function pointerManuel(piece: PieceRow) {
-    const saisie = window.prompt(
-      `Temps à ajouter sur « ${piece.titre_operation} » (en minutes) :`,
-    );
-    if (!saisie) return;
+    const saisie = await prompt({
+      title: "Saisie manuelle du temps",
+      message: `Temps à ajouter sur « ${piece.titre_operation} ».`,
+      label: "Durée (minutes)",
+      type: "number",
+      inputMode: "numeric",
+      placeholder: "ex. 30",
+      confirmLabel: "Ajouter",
+      emblem: "✎",
+      validate: (v) => {
+        const n = Number(v.replace(",", "."));
+        return Number.isFinite(n) && n > 0 ? null : "Indique un nombre de minutes (> 0).";
+      },
+    });
+    if (saisie === null) return;
     const minutes = Number(saisie.replace(",", "."));
-    if (!Number.isFinite(minutes) || minutes <= 0) {
-      return setError("Durée invalide.");
-    }
-    setError(null);
     const { error } = await pointerTempsAction(
       piece.id,
       Math.round(minutes * 60),
       true,
     );
-    if (error) return setError(error);
+    if (error) return toast.error("Pointage refusé", error);
+    toast.success("Temps ajouté", `${formatDuree(Math.round(minutes * 60))} sur « ${piece.titre_operation} »`);
     refetch();
   }
 
   async function corrigerTemps(piece: PieceRow) {
     const ancien = totalSec(piece);
-    const saisie = window.prompt(
-      `Corriger le temps total de « ${piece.titre_operation} » (en minutes) :`,
-      String(Math.round(ancien / 60)),
-    );
+    const saisie = await prompt({
+      title: "Corriger le temps total",
+      message: `Nouveau temps total de « ${piece.titre_operation} ». L'historique reste tracé (écriture corrective).`,
+      label: "Temps total (minutes)",
+      type: "number",
+      inputMode: "numeric",
+      defaultValue: String(Math.round(ancien / 60)),
+      confirmLabel: "Suivant",
+      emblem: "✎",
+      validate: (v) => {
+        const n = Number(v.replace(",", "."));
+        return Number.isFinite(n) && n >= 0 ? null : "Indique un nombre de minutes (≥ 0).";
+      },
+    });
     if (saisie === null) return;
     const minutes = Number(saisie.replace(",", "."));
-    if (!Number.isFinite(minutes) || minutes < 0) {
-      return setError("Total invalide.");
-    }
-    const raison = window.prompt("Motif de la correction :") ?? "";
-    setError(null);
+    const raison =
+      (await prompt({
+        title: "Motif de la correction",
+        message: "Pour la traçabilité du registre.",
+        label: "Motif",
+        placeholder: "ex. oubli d'arrêt du chrono",
+        confirmLabel: "Enregistrer",
+      })) ?? "";
     const { error } = await corrigerTempsAction(
       piece.id,
       ancien,
       Math.round(minutes * 60),
       raison,
     );
-    if (error) return setError(error);
+    if (error) return toast.error("Correction refusée", error);
+    toast.success("Temps corrigé", `Total : ${formatDuree(Math.round(minutes * 60))}`);
     refetch();
   }
 
   async function changeStatut(piece: PieceRow, vers: PieceStatut) {
     if (vers === piece.statut_courant) return;
-    setError(null);
     const { error } = await changeStatutAction(piece.id, piece.statut_courant, vers);
-    if (error) return setError(error);
+    if (error) return toast.error("Changement refusé", error);
+    if (vers === "terminee") {
+      toast.gold("Pièce terminée ✦", piece.titre_operation);
+    } else if (vers === "bloquee") {
+      toast.info("Pièce bloquée", piece.titre_operation);
+    }
     refetch();
   }
 
   async function envoiRelais(piece: PieceRow, versId: string) {
-    setError(null);
     const { error } = await envoiRelaisAction(piece.id, versId);
-    if (error) return setError(error);
+    if (error) return toast.error("Relais impossible", error);
+    const dest = users.find((u) => u.id === versId);
+    toast.gold(
+      "Relais transmis",
+      dest ? `« ${piece.titre_operation} » → ${dest.prenom} ${dest.nom}` : piece.titre_operation,
+    );
     refetch();
   }
 
   async function annulerEnvoi(piece: PieceRow) {
-    setError(null);
     const { error } = await annulerEnvoiAction(piece.id);
-    if (error) return setError(error);
+    if (error) return toast.error("Annulation impossible", error);
+    toast.info("Relais annulé", piece.titre_operation);
     refetch();
   }
 
   async function prendre(piece: PieceRow) {
-    setError(null);
-    const pin = window.prompt(
-      `Entre ton PIN pour prendre « ${piece.titre_operation} » :`,
-    );
-    if (!pin) return;
+    const pin = await prompt({
+      title: "Prendre la pièce",
+      message: `Confirme ton identité pour prendre « ${piece.titre_operation} ».`,
+      label: "Code PIN",
+      type: "password",
+      inputMode: "numeric",
+      placeholder: "••••",
+      confirmLabel: "Prendre",
+      emblem: "🔑",
+      validate: (v) =>
+        /^\d{4,8}$/.test(v) ? null : "Le PIN contient 4 à 8 chiffres.",
+    });
+    if (pin === null) return;
     const { error } = await prendreRelaisAction(piece.id, pin);
-    if (error) return setError(error);
+    if (error) return toast.error("PIN refusé", error);
+    toast.success("Pièce prise ✦", piece.titre_operation);
     refetch();
   }
 
   async function refuser(piece: PieceRow) {
-    setError(null);
+    const ok = await confirm({
+      title: "Refuser ce relais ?",
+      message: `« ${piece.titre_operation} » retournera à son expéditeur.`,
+      confirmLabel: "Refuser",
+    });
+    if (!ok) return;
     const { error } = await refuserRelaisAction(piece.id);
-    if (error) return setError(error);
+    if (error) return toast.error("Action impossible", error);
+    toast.info("Relais refusé", piece.titre_operation);
     refetch();
   }
 
@@ -307,6 +354,7 @@ export function PiecesBoard({
     if (error) return setPinMsg(error);
     setPinValue("");
     setShowPin(false);
+    toast.success("Code PIN enregistré", "Tu peux désormais accepter un relais.");
   }
 
   async function createPiece(e: React.FormEvent) {
@@ -334,6 +382,7 @@ export function PiecesBoard({
       return setError(error);
     }
 
+    const titreCree = titre.trim();
     setTitre("");
     setPoleId("");
     setNumeroSerie("");
@@ -345,6 +394,7 @@ export function PiecesBoard({
     setOfId("");
     setShowForm(false);
     setBusy(false);
+    toast.success("Pièce créée", titreCree);
     refetch();
   }
 
@@ -699,12 +749,6 @@ export function PiecesBoard({
           </button>
         </div>
       </div>
-
-      {error ? (
-        <p className="rounded-md bg-red-500/15 px-3 py-2 text-sm text-red-300">
-          {error}
-        </p>
-      ) : null}
 
       {/* Inbox — pièces qu'on m'a envoyées et que je dois prendre */}
       {inbox.length > 0 ? (

@@ -28,15 +28,21 @@ export function Modal({ open, onClose, title, children }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6"
+      className="dialog-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 sm:p-6"
       onClick={onClose}
     >
       <div
-        className="my-auto w-full max-w-2xl rounded-2xl border border-white/15 bg-[#16203a] shadow-2xl shadow-black/50"
+        className="dialog-pop guilloche relative my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-[#CFB53B]/35 bg-[#141d33] shadow-2xl shadow-black/60"
         onClick={(e) => e.stopPropagation()}
+        style={{
+          boxShadow:
+            "0 30px 80px -20px rgba(0,0,0,.8), 0 0 0 1px rgba(207,181,59,.14), 0 0 40px -12px rgba(207,181,59,.4)",
+        }}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-          <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
+        <div className="relative flex items-center justify-between border-b border-white/10 px-6 py-4">
+          <h3 className="font-display text-lg font-semibold tracking-tight">
+            {title}
+          </h3>
           <button
             onClick={onClose}
             aria-label="Fermer"
@@ -45,7 +51,9 @@ export function Modal({ open, onClose, title, children }: Props) {
             ✕
           </button>
         </div>
-        <div className="max-h-[78vh] overflow-y-auto p-6">{children}</div>
+        <div className="relative max-h-[78vh] overflow-y-auto p-6">
+          {children}
+        </div>
       </div>
     </div>
   );
