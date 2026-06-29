@@ -44,6 +44,7 @@ export type PieceRow = {
   echeance: string | null;
   statut_courant: PieceStatut;
   terminee_at: string | null;
+  created_at?: string | null;
   proprietaire_courant_id: string | null;
   relais_vers_id: string | null;
   atelier: {
@@ -52,7 +53,7 @@ export type PieceRow = {
   } | null;
   proprietaire: { prenom: string; nom: string } | null;
   destinataire: { prenom: string; nom: string } | null;
-  temps: { duree_sec: number; user_id: string }[];
+  temps: { duree_sec: number; user_id: string; created_at?: string | null }[];
 };
 
 /** Personne (établi) pour le choix d'un destinataire de relais. */
